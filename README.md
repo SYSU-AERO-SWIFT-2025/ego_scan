@@ -233,7 +233,7 @@ For any technical issues, please contact Xin Zhou (iszhouxin@zju.edu.cn) or Fei 
 For commercial inquiries, please contact Fei GAO (fgaoaa@zju.edu.cn).
 
 #运行scanner包并且发布扫描中心
- rosrun uav1_scan_planner scan_planner_node
+ roslaunch team_launch team.launch
  rostopic pub  /human/pose geometry_msgs/PoseStamped "header:
   frame_id: 'map'
 pose:
