@@ -30,14 +30,14 @@ void bsplineCallback(traj_utils::BsplineConstPtr msg)
 
   Eigen::MatrixXd pos_pts(3, msg->pos_pts.size());
 
-  Eigen::VectorXd knots(msg->knots.size());
+  Eigen::VectorXd knots(msg->knots.size());//存储B样条曲线的节点
   for (size_t i = 0; i < msg->knots.size(); ++i)
   {
     knots(i) = msg->knots[i];
   }
 
   for (size_t i = 0; i < msg->pos_pts.size(); ++i)
-  {
+  { //存储位置消息
     pos_pts(0, i) = msg->pos_pts[i].x;
     pos_pts(1, i) = msg->pos_pts[i].y;
     pos_pts(2, i) = msg->pos_pts[i].z;

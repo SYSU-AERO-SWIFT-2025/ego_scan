@@ -32,39 +32,40 @@ namespace ego_planner
     /* ---------- flag ---------- */
     enum FSM_EXEC_STATE
     {
-      INIT,
-      WAIT_TARGET,
-      GEN_NEW_TRAJ,
-      REPLAN_TRAJ,
-      EXEC_TRAJ,
-      EMERGENCY_STOP,
-      SEQUENTIAL_START
+      INIT, //初始化状态
+      WAIT_TARGET, //等待目标状态。等待用户输入目标
+      GEN_NEW_TRAJ, //生成新轨迹状态
+      REPLAN_TRAJ, //重新规划轨迹状态
+      EXEC_TRAJ, //执行轨迹状态
+      EMERGENCY_STOP, //紧急停止状态
+      SEQUENTIAL_START //顺序启动状态
     };
     enum TARGET_TYPE
     {
-      MANUAL_TARGET = 1,
-      PRESET_TARGET = 2,
-      REFENCE_PATH = 3
+      MANUAL_TARGET = 1, //手动目标
+      PRESET_TARGET = 2, //预设目标
+      REFENCE_PATH = 3  //目标是路径
     };
 
     /* planning utils */
-    EGOPlannerManager::Ptr planner_manager_;
-    PlanningVisualization::Ptr visualization_;
-    traj_utils::DataDisp data_disp_;
-    traj_utils::MultiBsplines multi_bspline_msgs_buf_;
+    EGOPlannerManager::Ptr planner_manager_; //轨迹的生成
+    PlanningVisualization::Ptr visualization_; //结果可视化
+    traj_utils::DataDisp data_disp_; //显示和记录轨迹数据
+    traj_utils::MultiBsplines multi_bspline_msgs_buf_; //管理多条B样条轨迹
 
     /* parameters */
     int target_type_; // 1 mannual select, 2 hard code
-    double no_replan_thresh_, replan_thresh_;
-    double waypoints_[50][3];
-    int waypoint_num_, wp_id_;
-    double planning_horizen_, planning_horizen_time_;
-    double emergency_time_;
-    bool flag_realworld_experiment_;
+    double no_replan_thresh_, replan_thresh_; //目标点与无人机当前位置小于no_replan_thresh_就不需要再规划到这个点的轨迹
+    double waypoints_[50][3];  //路标点三轴位置
+    int waypoint_num_, wp_id_;  //路标点个数，每架飞机一个终点 
+    double planning_horizen_, planning_horizen_time_; //局部规划的范围 
+    double emergency_time_; //如果距离碰撞的时间小于该值，立刻切换到停止模式
+    bool flag_realworld_experiment_; //是否为真实环境实验
     bool enable_fail_safe_;
 
     /* planning data */
     bool have_trigger_, have_target_, have_odom_, have_new_target_, have_recv_pre_agent_;
+    bool is_waypoint_queue_running_=false;//标记是否正在执行队列
     FSM_EXEC_STATE exec_state_;
     int continously_called_times_{0};
 

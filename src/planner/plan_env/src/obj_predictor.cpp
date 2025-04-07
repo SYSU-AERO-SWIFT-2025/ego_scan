@@ -43,7 +43,7 @@ void ObjHistory::init(int id, int skip_num, int queue_size, ros::Time global_sta
 }
 
 void ObjHistory::poseCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
-  ++skip_;
+  ++skip_; //位置消息话题的回调函数，每次一个收到位置消息，如果符合采样频率，那么就记录在轨迹历史中
   if (skip_ < skip_num_) return;
 
   Eigen::Vector4d pos_t;
@@ -72,7 +72,7 @@ ObjPredictor::~ObjPredictor() {
 }
 
 void ObjPredictor::init() {
-  /* get param */
+  /* get param */ //初始化
   int queue_size, skip_nums;
 
   node_handle_.param("prediction/obj_num", obj_num_, 0);
@@ -90,7 +90,7 @@ void ObjPredictor::init() {
   for (int i = 0; i < obj_num_; i++)
     scale_init_[i] = false;
 
-  /* subscribe to pose */
+  /* subscribe to pose */ //为每一个物体初始化一个历史轨迹
   ros::Time t_now = ros::Time::now();
   for (int i = 0; i < obj_num_; i++) {
     shared_ptr<ObjHistory> obj_his(new ObjHistory);
@@ -200,13 +200,13 @@ void ObjPredictor::markerCallback(const visualization_msgs::MarkerConstPtr& msg)
   for (int i = 0; i < obj_num_; i++) {
     if (scale_init_[i]) finish_num++;
   }
-
+//当物体尺寸消息全部得到，可以关闭订阅
   if (finish_num == obj_num_) {
     marker_sub_.shutdown();
   }
 }
 
-void ObjPredictor::predictConstVel() {
+void ObjPredictor::predictConstVel() { //基于恒定速度模型预测动态物体未来轨迹
   for (int i = 0; i < obj_num_; i++) {
     /* ---------- get the last two point ---------- */
     list<Eigen::Vector4d> his;

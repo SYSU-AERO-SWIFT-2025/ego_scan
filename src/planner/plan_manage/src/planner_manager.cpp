@@ -57,7 +57,7 @@ namespace ego_planner
     //      << endl;
 
     if ((start_pt - local_target_pt).norm() < 0.2)
-    {
+    { //检查当前起点和目标点是否过于接近
       cout << "Close to goal" << endl;
       continous_failures_count_++;
       return false;
@@ -69,6 +69,7 @@ namespace ego_planner
     ros::Duration t_init, t_opt, t_refine;
 
     /*** STEP 1: INIT ***/
+    //计算时间步长
     double ts = (start_pt - local_target_pt).norm() > 0.1 ? pp_.ctrl_pt_dist / pp_.max_vel_ * 1.5 : pp_.ctrl_pt_dist / pp_.max_vel_ * 5; // pp_.ctrl_pt_dist / pp_.max_vel_ is too tense, and will surely exceed the acc/vel limits
     vector<Eigen::Vector3d> point_set, start_end_derivatives;
     static bool flag_first_call = true, flag_force_polynomial = false;
@@ -80,7 +81,7 @@ namespace ego_planner
       flag_regenerate = false;
 
       if (flag_first_call || flag_polyInit || flag_force_polynomial /*|| ( start_pt - local_target_pt ).norm() < 1.0*/) // Initial path generated from a min-snap traj by order.
-      {
+      { //首次调用
         flag_first_call = false;
         flag_force_polynomial = false;
 

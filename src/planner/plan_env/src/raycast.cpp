@@ -13,6 +13,7 @@ double mod(double value, double modulus) {
 
 double intbound(double s, double ds) {
   // Find the smallest positive t such that s+t*ds is an integer.
+  // 
   if (ds < 0) {
     return intbound(-s, -ds);
   } else {
@@ -24,6 +25,9 @@ double intbound(double s, double ds) {
 
 void Raycast(const Eigen::Vector3d& start, const Eigen::Vector3d& end, const Eigen::Vector3d& min,
              const Eigen::Vector3d& max, int& output_points_cnt, Eigen::Vector3d* output) {
+
+  //start：射线的起始坐标；end：射线的终点桌标；min：网格原点；max：网格尺寸
+  //output_points_cnt: 记录射线经过的体素数量；output: 三维空间内存储射线经过的体素坐标（一个个小方格）
   //    std::cout << start << ' ' << end << std::endl;
   // From "A Fast Voxel Traversal Algorithm for Ray Tracing"
   // by John Amanatides and Andrew Woo, 1987
@@ -44,10 +48,10 @@ void Raycast(const Eigen::Vector3d& start, const Eigen::Vector3d& end, const Eig
   // tMaxX, tMaxY, and tMaxZ.
 
   // Cube containing origin point.
-  int x = (int)std::floor(start.x());
+  int x = (int)std::floor(start.x()); //射线起始体素坐标（取整）
   int y = (int)std::floor(start.y());
   int z = (int)std::floor(start.z());
-  int endX = (int)std::floor(end.x());
+  int endX = (int)std::floor(end.x()); //射线终点体素坐标（取整）
   int endY = (int)std::floor(end.y());
   int endZ = (int)std::floor(end.z());
   Eigen::Vector3d direction = (end - start);
@@ -59,18 +63,18 @@ void Raycast(const Eigen::Vector3d& start, const Eigen::Vector3d& end, const Eig
   double dz = endZ - z;
 
   // Direction to increment x,y,z when stepping.
-  int stepX = (int)signum((int)dx);
+  int stepX = (int)signum((int)dx);  //步进方向
   int stepY = (int)signum((int)dy);
   int stepZ = (int)signum((int)dz);
 
   // See description above. The initial values depend on the fractional
   // part of the origin.
-  double tMaxX = intbound(start.x(), dx);
+  double tMaxX = intbound(start.x(), dx); //射线到达下一个体素边界的参数值
   double tMaxY = intbound(start.y(), dy);
   double tMaxZ = intbound(start.z(), dz);
 
   // The change in t when taking a step (always positive).
-  double tDeltaX = ((double)stepX) / dx;
+  double tDeltaX = ((double)stepX) / dx; //这些参数表示在每个轴向上移动一个体素所需的参数增量。它们用于更新 tMax 值
   double tDeltaY = ((double)stepY) / dy;
   double tDeltaZ = ((double)stepZ) / dz;
 

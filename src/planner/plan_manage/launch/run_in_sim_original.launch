@@ -17,9 +17,7 @@
 
   <!-- number of moving objects -->
   <arg name="obj_num" value="10" />
-   <!-- 新增无人机类型参数 ：改-->
-   <arg name="uav_type" default="basic"/> <!-- basic/carpet 地毯上扫描/precision 精确扫描/safe 跟随人 -->
-  
+
   <!-- main algorithm params -->
   <include file="$(find ego_planner)/launch/advanced_param.xml">
 
@@ -48,9 +46,9 @@
     <arg name="fx" value="387.229248046875"/>
     <arg name="fy" value="387.229248046875"/>
 
-    <!-- 根据无人机类型设置不同参数 ：改-->
-    <arg name="max_vel" value="$(eval 2.0 if arg('uav_type')=='carpet' else 1.5)" />
-    <arg name="max_acc" value="$(eval 3.0 if arg('uav_type')=='carpet' else 2.0)" />
+    <!-- maximum velocity and acceleration the drone will reach -->
+    <arg name="max_vel" value="2.0" />
+    <arg name="max_acc" value="3.0" />
 
     <!--always set to 1.5 times grater than sensing horizen-->
     <arg name="planning_horizon" value="7.5" /> 

@@ -648,14 +648,14 @@ void server_fun()
 {
   int valread;
 
-  // Connect
+  // Connect  等待连接
   if (wait_connection_from_previous_drone(PORT, server_fd_, recv_sock_) < 0)
   {
     ROS_ERROR("[bridge_node]Socket recever creation error!");
     exit(EXIT_FAILURE);
   }
 
-  while (true)
+  while (true) //循环读取数据
   {
     valread = read(recv_sock_, recv_buf_, BUF_LEN);
 
@@ -667,7 +667,7 @@ void server_fun()
       return;
     }
 
-    if (valread == deserializeMultiBsplines(bsplines_msg_))
+    if (valread == deserializeMultiBsplines(bsplines_msg_))//反序列化数据
     {
       swarm_trajs_pub_.publish(*bsplines_msg_);
     }

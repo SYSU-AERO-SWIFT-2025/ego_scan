@@ -49,9 +49,9 @@ typedef shared_ptr<vector<Eigen::Vector3d>> ObjScale;
 /* ========== prediction polynomial ========== */
 class PolynomialPrediction {
 private:
-  vector<Eigen::Matrix<double, 6, 1>> polys;
-  double t1, t2;  // start / end
-  ros::Time global_start_time_;
+  vector<Eigen::Matrix<double, 6, 1>> polys;//存储多项式的系数矩阵
+  double t1, t2;  // start / end //预测的起始和结束时间
+  ros::Time global_start_time_; //全局起始时间
 
 public:
   PolynomialPrediction(/* args */) {
@@ -74,7 +74,7 @@ public:
     return polys.size() == 3;
   }
 
-  /* note that t should be in [t1, t2] */
+  /* note that t should be in [t1, t2] */  //根据多项式模型计算物体在给定时间的位置
   Eigen::Vector3d evaluate(double t) {
     Eigen::Matrix<double, 6, 1> tv;
     tv << 1.0, pow(t, 1), pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5);
@@ -85,7 +85,7 @@ public:
     return pt;
   }
 
-  Eigen::Vector3d evaluateConstVel(double t) {
+  Eigen::Vector3d evaluateConstVel(double t) { //恒定速度模型计算物体在给定时间的位置
     Eigen::Matrix<double, 2, 1> tv;
     tv << 1.0, pow(t-global_start_time_.toSec(), 1);
 
@@ -123,7 +123,7 @@ public:
   }
 
 private:
-  list<Eigen::Vector4d> history_;  // x,y,z;t
+  list<Eigen::Vector4d> history_;  // x,y,z;t 存储物体历史位姿信息
   int skip_;
   int obj_idx_;
   Eigen::Vector3d scale_;
@@ -138,14 +138,14 @@ private:
   double lambda_;
   double predict_rate_;
 
-  vector<ros::Subscriber> pose_subs_;
-  ros::Subscriber marker_sub_;
-  ros::Timer predict_timer_;
-  vector<shared_ptr<ObjHistory>> obj_histories_;
+  vector<ros::Subscriber> pose_subs_; //订阅物体的位姿信息
+  ros::Subscriber marker_sub_; //订阅物体的标记信息
+  ros::Timer predict_timer_;  //定时器
+  vector<shared_ptr<ObjHistory>> obj_histories_; //存储每个物体的历史记录
 
   /* share data with planner */
-  ObjPrediction predict_trajs_;
-  ObjScale obj_scale_;
+  ObjPrediction predict_trajs_;  //存储所有物体的预测轨迹，供规划器使用
+  ObjScale obj_scale_; //存储所有物体的尺寸信息，判断物体是否会发生碰撞
   vector<bool> scale_init_;
 
   void markerCallback(const visualization_msgs::MarkerConstPtr& msg);

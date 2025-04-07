@@ -67,7 +67,7 @@ void DroneDetector::readParameters()
   max_pose_error2_ = max_pose_error_*max_pose_error_;
 }
 
-// inline functions
+// inline functions //获得距离
 inline double DroneDetector::getDist2(const Eigen::Vector3d &p1, const Eigen::Vector3d &p2)
 {
     double delta_x = p1(0)-p2(0);
@@ -76,6 +76,7 @@ inline double DroneDetector::getDist2(const Eigen::Vector3d &p1, const Eigen::Ve
     return delta_x*delta_x+delta_y*delta_y+delta_z*delta_z;
 }
 
+//获得距离
 inline double DroneDetector::getDist2(const Eigen::Vector4d &p1, const Eigen::Vector4d &p2)
 {
     double delta_x = p1(0)-p2(0);
@@ -84,6 +85,7 @@ inline double DroneDetector::getDist2(const Eigen::Vector4d &p1, const Eigen::Ve
     return delta_x*delta_x+delta_y*delta_y+delta_z*delta_z;
 }
 
+//将深度图像中的像素坐标转换为相机坐标系中位置
 inline Eigen::Vector4d DroneDetector::depth2Pos(int u, int v, float depth) 
 {
   Eigen::Vector4d pose_in_camera;
@@ -93,6 +95,7 @@ inline Eigen::Vector4d DroneDetector::depth2Pos(int u, int v, float depth)
   pose_in_camera(3) = 1.0;
   return pose_in_camera;
 }
+
 
 inline Eigen::Vector4d DroneDetector::depth2Pos(const Eigen::Vector2i &pixel, float depth) 
 {
@@ -104,6 +107,7 @@ inline Eigen::Vector4d DroneDetector::depth2Pos(const Eigen::Vector2i &pixel, fl
   return pose_in_camera;
 }
 
+//将相机坐标系中位置转换为深度图像中像素坐标
 inline Eigen::Vector2i DroneDetector::pos2Depth(const Eigen::Vector4d &pose_in_camera) 
 {
   float depth = pose_in_camera(2);
@@ -113,6 +117,7 @@ inline Eigen::Vector2i DroneDetector::pos2Depth(const Eigen::Vector4d &pose_in_c
   return pixel;
 }
 
+//判断像素坐标位置是否在图像范围
 inline bool DroneDetector::isInSensorRange(const Eigen::Vector2i &pixel)
 {
   if (pixel(0)>=0 && pixel(1) >= 0 && pixel(0) <= img_width_ && pixel(1) <= img_height_) return true;
@@ -120,6 +125,7 @@ inline bool DroneDetector::isInSensorRange(const Eigen::Vector2i &pixel)
     return false;
 }
 
+//当前无人机里程计回调函数，计算相机在世界坐标系中的位置和姿态
 void DroneDetector::rcvMyOdomCallback(const nav_msgs::Odometry& odom)
 {
   my_odom_ = odom;
@@ -157,6 +163,8 @@ void DroneDetector::rcvMyOdomCallback(const nav_msgs::Odometry& odom)
   // br.sendTransform(tf::StampedTransform(transform, my_last_odom_stamp, "world", "camera")); 
   //publish transform from world frame to quadrotor frame.
 }
+
+//处理深度图像回调函数，检测其他无人机位置
 void DroneDetector::rcvDepthImgCallback(const sensor_msgs::ImageConstPtr& depth_img)
 {
   /* get depth image */
@@ -219,6 +227,7 @@ void DroneDetector::rcvDepthImgCallback(const sensor_msgs::ImageConstPtr& depth_
   }
 }
 
+
 void DroneDetector::rcvDroneOdomCallbackBase(const nav_msgs::Odometry& odom, int drone_id)
 {
   if (drone_id == my_id_) {
@@ -251,6 +260,7 @@ void DroneDetector::rcvDroneOdomCallbackBase(const nav_msgs::Odometry& odom, int
   }
 }
 
+//其他无人机里程计回调函数
 void DroneDetector::rcvDrone0OdomCallback(const nav_msgs::Odometry& odom)
 {
   rcvDroneOdomCallbackBase(odom, 0);
@@ -280,6 +290,7 @@ void DroneDetector::rcvDroneXOdomCallback(const nav_msgs::Odometry& odom)
   }
 }
 
+//在深度图像中搜索其他无人机的位置，计算其像素坐标和相机坐标系中的位置
 bool DroneDetector::countPixel(int drone_id, Eigen::Vector2i &true_pixel, Eigen::Vector4d &true_pose_cam) 
 {
   boundingbox_lu_[drone_id].x = img_width_;
@@ -393,6 +404,7 @@ bool DroneDetector::countPixel(int drone_id, Eigen::Vector2i &true_pixel, Eigen:
   return false;
 }
 
+//计算检测到的无人机相对于当前无人机的位置误差，并发布结果
 void DroneDetector::detect(int drone_id, Eigen::Vector2i &true_pixel)
 {
   Eigen::Vector4d true_pose_cam, pose_error;

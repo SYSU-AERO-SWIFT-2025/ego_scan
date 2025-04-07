@@ -160,6 +160,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
   // eng_ = default_random_engine(rd());
 }
 
+//清除所有体素占据信息
 void GridMap::resetBuffer()
 {
   Eigen::Vector3d min_pos = mp_.map_min_boundary_;
@@ -171,6 +172,7 @@ void GridMap::resetBuffer()
   md_.local_bound_max_ = mp_.map_voxel_num_ - Eigen::Vector3i::Ones();
 }
 
+//重置指定范围内的地图缓冲器，清空体素占据信息
 void GridMap::resetBuffer(Eigen::Vector3d min_pos, Eigen::Vector3d max_pos)
 {
 
@@ -190,6 +192,7 @@ void GridMap::resetBuffer(Eigen::Vector3d min_pos, Eigen::Vector3d max_pos)
       }
 }
 
+//设置某个位置的占据状态。更新缓存信息
 int GridMap::setCacheOccupancy(Eigen::Vector3d pos, int occ)
 {
   if (occ != 1 && occ != 0)
@@ -212,6 +215,7 @@ int GridMap::setCacheOccupancy(Eigen::Vector3d pos, int occ)
   return idx_ctns;
 }
 
+//深度图像投影到3D空间，生成点云数据
 void GridMap::projectDepthImage()
 {
   // md_.proj_points_.clear();
@@ -336,6 +340,7 @@ void GridMap::projectDepthImage()
   md_.last_depth_image_ = md_.depth_image_;
 }
 
+//对投影的点云进行射线投射，更新地图中的占据信息
 void GridMap::raycastProcess()
 {
   // if (md_.proj_points_.size() == 0)

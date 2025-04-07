@@ -28,7 +28,7 @@
 
 using namespace std;
 
-// voxel hashing
+// voxel hashing //哈希计算
 template <typename T>
 struct matrix_hash : std::unary_function<T, size_t> {
   std::size_t operator()(T const& matrix) const {
@@ -46,23 +46,23 @@ struct matrix_hash : std::unary_function<T, size_t> {
 struct MappingParameters {
 
   /* map properties */
-  Eigen::Vector3d map_origin_, map_size_;
+  Eigen::Vector3d map_origin_, map_size_; //地图的原点坐标/地图尺寸
   Eigen::Vector3d map_min_boundary_, map_max_boundary_;  // map range in pos
-  Eigen::Vector3i map_voxel_num_;                        // map range in index
-  Eigen::Vector3d local_update_range_;
-  double resolution_, resolution_inv_;
-  double obstacles_inflation_;
+  Eigen::Vector3i map_voxel_num_;                        // map range in index，三个维度上体素范围
+  Eigen::Vector3d local_update_range_; //局部地图更新范围
+  double resolution_, resolution_inv_; //地图分辨率，每个格子大小
+  double obstacles_inflation_; //障碍物膨胀半径
   string frame_id_;
   int pose_type_;
 
   /* camera parameters */
-  double cx_, cy_, fx_, fy_;
+  double cx_, cy_, fx_, fy_; //相机参数（光心坐标/焦距）
 
   /* time out */
   double odom_depth_timeout_;
 
   /* depth image projection filtering */
-  double depth_filter_maxdist_, depth_filter_mindist_, depth_filter_tolerance_;
+  double depth_filter_maxdist_, depth_filter_mindist_, depth_filter_tolerance_; //深度图像有效距离范围
   int depth_filter_margin_;
   bool use_depth_filter_;
   double k_depth_scaling_factor_;
@@ -77,7 +77,7 @@ struct MappingParameters {
   /* local map update and clear */
   int local_map_margin_;
 
-  /* visualization and computation time display */
+  /* visualization and computation time display */ //可视化参数
   double visualization_truncate_height_, virtual_ceil_height_, ground_height_, virtual_ceil_yp_, virtual_ceil_yn_;
   bool show_occ_time_;
 
@@ -95,8 +95,8 @@ struct MappingData {
 
   // camera position and pose data
 
-  Eigen::Vector3d camera_pos_, last_camera_pos_;
-  Eigen::Matrix3d camera_r_m_, last_camera_r_m_;
+  Eigen::Vector3d camera_pos_, last_camera_pos_; //相机当前位置
+  Eigen::Matrix3d camera_r_m_, last_camera_r_m_; //相机旋转矩阵
   Eigen::Matrix4d cam2body_;
 
   // depth image data
@@ -106,7 +106,7 @@ struct MappingData {
 
   // flags of map state
 
-  bool occ_need_update_, local_updated_;
+  bool occ_need_update_, local_updated_; //是否需要更新地图
   bool has_first_depth_;
   bool has_odom_, has_cloud_;
 
@@ -147,16 +147,16 @@ public:
   enum { POSE_STAMPED = 1, ODOMETRY = 2, INVALID_IDX = -10000 };
 
   // occupancy map management
-  void resetBuffer();
+  void resetBuffer(); //重置缓冲区
   void resetBuffer(Eigen::Vector3d min, Eigen::Vector3d max);
-
+ //三维位置和地图索引的转换
   inline void posToIndex(const Eigen::Vector3d& pos, Eigen::Vector3i& id);
   inline void indexToPos(const Eigen::Vector3i& id, Eigen::Vector3d& pos);
   inline int toAddress(const Eigen::Vector3i& id);
   inline int toAddress(int& x, int& y, int& z);
   inline bool isInMap(const Eigen::Vector3d& pos);
   inline bool isInMap(const Eigen::Vector3i& idx);
-
+  //得到或更新地图的占据信息
   inline void setOccupancy(Eigen::Vector3d pos, double occ = 1);
   inline void setOccupied(Eigen::Vector3d pos);
   inline int getOccupancy(Eigen::Vector3d pos);
@@ -192,7 +192,7 @@ private:
   MappingParameters mp_;
   MappingData md_;
 
-  // get depth image and camera pose
+  // get depth image and camera pose 传感器和摄像机的回调函数
   void depthPoseCallback(const sensor_msgs::ImageConstPtr& img,
                          const geometry_msgs::PoseStampedConstPtr& pose);
   void extrinsicCallback(const nav_msgs::OdometryConstPtr& odom);
@@ -243,7 +243,7 @@ private:
 
 /* ============================== definition of inline function
  * ============================== */
-
+//将3D体素索引转换为一维数组的线性地址
 inline int GridMap::toAddress(const Eigen::Vector3i& id) {
   return id(0) * mp_.map_voxel_num_(1) * mp_.map_voxel_num_(2) + id(1) * mp_.map_voxel_num_(2) + id(2);
 }

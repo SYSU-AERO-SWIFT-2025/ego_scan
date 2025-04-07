@@ -1,0 +1,45 @@
+<launch>
+    <!-- 定义全局地图参数 -->
+    <arg name="map_size_x" default="42.0"/>
+    <arg name="map_size_y" default="30.0"/>
+    <arg name="map_size_z" default="5.0"/>
+    <arg name="odom_topic" default="visual_slam/odom" />
+
+    <!-- 公共环境配置 -->
+    <include file="$(find ego_planner)/launch/rviz.launch"/>
+    
+    <!-- 加载地图（通过 swarm.launch） -->
+    <include file="$(find ego_planner)/launch/swarm.launch">
+        <arg name="map_size_x" value="$(arg map_size_x)"/>
+        <arg name="map_size_y" value="$(arg map_size_y)"/>
+        <arg name="map_size_z" value="$(arg map_size_z)"/>
+        <arg name="odom_topic" value="$(arg odom_topic)"/>
+    </include>
+
+    <!-- 为 UAV1 传递地图参数 -->
+    <include file="$(find uav1_scan_planner)/launch/uav1.launch">
+            <!-- 传递地图参数 -->
+            <arg name="map_size_x" value="$(arg map_size_x)"/>
+            <arg name="map_size_y" value="$(arg map_size_y)"/>
+            <arg name="map_size_z" value="$(arg map_size_z)"/>
+            <arg name="odom_topic" value="$(arg odom_topic)"/>
+    </include>
+</launch>
+    <!-- <group ns="uav2">
+        <include file="$(find uav_system)/launch/uav2.launch"/>
+    </group>
+
+    <group ns="uav3">
+        <include file="$(find uav_system)/launch/uav3.launch"/>
+    </group>
+
+    <group ns="uav4">
+        <include file="$(find uav_system)/launch/uav4.launch"/>
+    </group> -->
+
+    <!-- 团队通信桥接 -->
+    <!-- <node pkg="topic_tools" type="relay" name="relay_uav1_to_team" args="/uav1/suspicious_mines /team/suspicious_mines"/> -->
+    
+    <!-- 可视化增强 -->
+    <!-- <node pkg="rviz" type="rviz" name="team_rviz" args="-d $(find team_launch)/rviz/team_view.rviz"/>
+</launch> -->

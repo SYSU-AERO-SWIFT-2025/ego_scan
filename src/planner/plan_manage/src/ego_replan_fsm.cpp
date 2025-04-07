@@ -61,6 +61,7 @@ namespace ego_planner
 
     if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
+      wp_id_=-1;//改
       waypoint_sub_ = nh.subscribe("/move_base_simple/goal", 1, &EGOReplanFSM::waypointCallback, this);
     }
     else if (target_type_ == TARGET_TYPE::PRESET_TARGET)
@@ -217,9 +218,18 @@ namespace ego_planner
     // trigger_ = true;
     init_pt_ = odom_pos_;
 
-    Eigen::Vector3d end_wp(msg->pose.position.x, msg->pose.position.y, 1.0);
-
-    planNextWaypoint(end_wp);
+    Eigen::Vector3d new_wp(msg->pose.position.x, msg->pose.position.y, 1.0);
+    if (!wps_.empty() && (new_wp - wps_.back()).norm() < 0.1) {
+  }
+   else{
+    wps_.push_back(new_wp);  // 追加到预设队列
+   } 
+   ROS_INFO("\033[1;33mCurrent wps_ size: %zu\033[0m", wps_.size());  // 黄色加粗
+    // 若当前无目标或处于空闲状态，立即执行
+    if (exec_state_ == WAIT_TARGET || !have_target_) {
+        wp_id_++;
+        planNextWaypoint(wps_[wp_id_]); //改
+    }
   }
 
   void EGOReplanFSM::odometryCallback(const nav_msgs::OdometryConstPtr &msg)
@@ -334,13 +344,13 @@ namespace ego_planner
       return;
     }
 
-    if ((int)msg->traj.size() != msg->drone_id_from + 1) // drone_id must start from 0
+    if ((int)msg->traj.size() != msg->drone_id_from + 1) // drone_id must start from 0 //假如drone_id=1,那么轨迹数量应该为2
     {
       ROS_ERROR("Wrong trajectory size! msg->traj.size()=%d, msg->drone_id_from+1=%d", (int)msg->traj.size(), msg->drone_id_from + 1);
       return;
     }
 
-    if (msg->traj[0].order != 3) // only support B-spline order equals 3.
+    if (msg->traj[0].order != 3) // only support B-spline order equals 3.//b样条轨迹阶数为3
     {
       ROS_ERROR("Only support B-spline order equals 3.");
       return;
@@ -352,17 +362,17 @@ namespace ego_planner
 
     for (size_t i = 0; i < msg->traj.size(); i++)
     {
-
+      //获取前三个控制点
       Eigen::Vector3d cp0(msg->traj[i].pos_pts[0].x, msg->traj[i].pos_pts[0].y, msg->traj[i].pos_pts[0].z);
       Eigen::Vector3d cp1(msg->traj[i].pos_pts[1].x, msg->traj[i].pos_pts[1].y, msg->traj[i].pos_pts[1].z);
       Eigen::Vector3d cp2(msg->traj[i].pos_pts[2].x, msg->traj[i].pos_pts[2].y, msg->traj[i].pos_pts[2].z);
       Eigen::Vector3d swarm_start_pt = (cp0 + 4 * cp1 + cp2) / 6;
       if ((swarm_start_pt - odom_pos_).norm() > planning_horizen_ * 4.0f / 3.0f)
-      {
+      { //起始点和当前里程计位置距离超过阈值，跳过轨迹
         planner_manager_->swarm_trajs_buf_[i].drone_id = -1;
         continue;
       }
-
+      //提取控制点和时间节点存储到pos_ptd和knots中
       Eigen::MatrixXd pos_pts(3, msg->traj[i].pos_pts.size());
       Eigen::VectorXd knots(msg->traj[i].knots.size());
       for (size_t j = 0; j < msg->traj[i].knots.size(); ++j)
@@ -377,7 +387,7 @@ namespace ego_planner
       }
 
       planner_manager_->swarm_trajs_buf_[i].drone_id = i;
-
+      //设置轨迹持续时间
       if (msg->traj[i].order % 2)
       {
         double cutback = (double)msg->traj[i].order / 2 + 1.5;
@@ -398,7 +408,7 @@ namespace ego_planner
 
       planner_manager_->swarm_trajs_buf_[i].start_time_ = msg->traj[i].start_time;
     }
-
+    //接收到轨迹数据
     have_recv_pre_agent_ = true;
   }
 
@@ -459,9 +469,15 @@ namespace ego_planner
 
     case WAIT_TARGET:
     {
-      if (!have_target_ || !have_trigger_)
+      if (!have_target_ || !have_trigger_){
+        if(wps_.size()!=0 ){
+          if(wp_id_ <wps_.size()-1){ //改
+            changeFSMExecState(SEQUENTIAL_START, "FSM");
+          }
+        }
         goto force_return;
       // return;
+      }
       else
       {
         // if ( planner_manager_->pp_.drone_id <= 0 )
@@ -553,11 +569,20 @@ namespace ego_planner
       Eigen::Vector3d pos = info->position_traj_.evaluateDeBoorT(t_cur);
 
       /* && (end_pt_ - pos).norm() < 0.5 */
-      if ((target_type_ == TARGET_TYPE::PRESET_TARGET) &&
+      if (((target_type_ == TARGET_TYPE::PRESET_TARGET  ) ) &&
           (wp_id_ < waypoint_num_ - 1) &&
           (end_pt_ - pos).norm() < no_replan_thresh_)
       {
         wp_id_++;
+        ROS_INFO("\033[1;33mNext\033[0m");  // 黄色加粗
+        planNextWaypoint(wps_[wp_id_]);
+      }
+      else if (((target_type_ == TARGET_TYPE::MANUAL_TARGET  ) ) &&
+          (wp_id_ < wps_.size()-1) &&
+          (end_pt_ - pos).norm() < no_replan_thresh_)
+      { //改
+        wp_id_++;
+        ROS_INFO("\033[1;33mNext\033[0m");  // 黄色加粗
         planNextWaypoint(wps_[wp_id_]);
       }
       else if ((local_target_pt_ - end_pt_).norm() < 1e-3) // close to the global target
@@ -572,7 +597,11 @@ namespace ego_planner
             wp_id_ = 0;
             planNextWaypoint(wps_[wp_id_]);
           }
-
+          // if(target_type_ ==TARGET_TYPE::MANUAL_TARGET){
+          //   wp_id_++;
+          //   ROS_INFO("\033[1;33mNext\033[0m");  // 黄色加粗
+          //   planNextWaypoint(wps_[wp_id_]);
+          // }
           changeFSMExecState(WAIT_TARGET, "FSM");
           goto force_return;
           // return;
@@ -806,9 +835,9 @@ namespace ego_planner
 
   void EGOReplanFSM::publishSwarmTrajs(bool startup_pub)
   {
-    auto info = &planner_manager_->local_data_;
-
-    traj_utils::Bspline bspline;
+    auto info = &planner_manager_->local_data_; //获取当前无人机的局部数据
+    //创造b样条轨迹消息
+    traj_utils::Bspline bspline; //
     bspline.order = 3;
     bspline.start_time = info->start_time_;
     bspline.drone_id = planner_manager_->pp_.drone_id;
@@ -837,7 +866,7 @@ namespace ego_planner
     {
       multi_bspline_msgs_buf_.drone_id_from = planner_manager_->pp_.drone_id; // zx-todo
       if ((int)multi_bspline_msgs_buf_.traj.size() == planner_manager_->pp_.drone_id + 1)
-      {
+      { //检查轨迹数量和无人机id是否匹配，把本机b样条曲线加载到id对应位置
         multi_bspline_msgs_buf_.traj.back() = bspline;
       }
       else if ((int)multi_bspline_msgs_buf_.traj.size() == planner_manager_->pp_.drone_id)
@@ -849,7 +878,7 @@ namespace ego_planner
         ROS_ERROR("Wrong traj nums and drone_id pair!!! traj.size()=%d, drone_id=%d", (int)multi_bspline_msgs_buf_.traj.size(), planner_manager_->pp_.drone_id);
         // return plan_and_refine_success;
       }
-      swarm_trajs_pub_.publish(multi_bspline_msgs_buf_);
+      swarm_trajs_pub_.publish(multi_bspline_msgs_buf_);//发送消息
     }
 
     broadcast_bspline_pub_.publish(bspline);

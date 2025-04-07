@@ -18,35 +18,40 @@
 using namespace std;
 
 // pcl::search::KdTree<pcl::PointXYZ> kdtreeLocalMap;
-pcl::KdTreeFLANN<pcl::PointXYZ> kdtreeLocalMap;
-vector<int> pointIdxRadiusSearch;
-vector<float> pointRadiusSquaredDistance;
+pcl::KdTreeFLANN<pcl::PointXYZ> kdtreeLocalMap; //用于快速查询机器人周围的障碍物
+vector<int> pointIdxRadiusSearch; //存储搜索结果
+vector<float> pointRadiusSquaredDistance; //存储搜索结果
 
 random_device rd;
 // default_random_engine eng(4);
 default_random_engine eng(rd()); 
+//随机数生成器，用于生成障碍物的位置（x, y）、宽度（w）、高度（h）和膨胀系数（inf）
 uniform_real_distribution<double> rand_x;
 uniform_real_distribution<double> rand_y;
 uniform_real_distribution<double> rand_w;
 uniform_real_distribution<double> rand_h;
 uniform_real_distribution<double> rand_inf;
 
-ros::Publisher _local_map_pub;
-ros::Publisher _all_map_pub;
-ros::Publisher click_map_pub_;
-ros::Subscriber _odom_sub;
+ros::Publisher _local_map_pub; //发布局部地图
+ros::Publisher _all_map_pub; //发布全局地图
+ros::Publisher click_map_pub_; //点击生成的地图
+ros::Subscriber _odom_sub; //接收机器人的里程计信息
 
-vector<double> _state;
-
-int _obs_num;
+vector<double> _state; //存储机器人状态
+//地图参数
+int _obs_num; 
 double _x_size, _y_size, _z_size;
+//障碍物的生成范围
 double _x_l, _x_h, _y_l, _y_h, _w_l, _w_h, _h_l, _h_h;
+//地图的分辨率、传感器的感知范围、感知频率、机器人的初始位置
 double _z_limit, _sensing_range, _resolution, _sense_rate, _init_x, _init_y;
+//障碍物之间的最小距离
 double _min_dist;
-
+//地图是否生成完成和是否接收到里程计信息
 bool _map_ok = false;
 bool _has_odom = false;
 
+//圆形障碍物的数量、半径范围、高度范围和旋转角度范围
 int circle_num_;
 double radius_l_, radius_h_, z_l_, z_h_;
 double theta_;
@@ -55,9 +60,11 @@ uniform_real_distribution<double> rand_radius2_;
 uniform_real_distribution<double> rand_theta_;
 uniform_real_distribution<double> rand_z_;
 
+//存储全局地图和局部地图的点云数据
 sensor_msgs::PointCloud2 globalMap_pcd;
 pcl::PointCloud<pcl::PointXYZ> cloudMap;
 
+//存储全局地图的点云数据和点击生成的点云数据
 sensor_msgs::PointCloud2 localMap_pcd;
 pcl::PointCloud<pcl::PointXYZ> clicked_cloud_;
 
@@ -84,9 +91,9 @@ void RandomMapGenerate() {
     x = floor(x / _resolution) * _resolution + _resolution / 2.0;
     y = floor(y / _resolution) * _resolution + _resolution / 2.0;
 
-    int widNum = ceil(w / _resolution);
+    int widNum = ceil(w / _resolution); //坐标化障碍物位置
 
-    for (int r = -widNum / 2.0; r < widNum / 2.0; r++)
+    for (int r = -widNum / 2.0; r < widNum / 2.0; r++)//生成点云数据
       for (int s = -widNum / 2.0; s < widNum / 2.0; s++) {
         h = rand_h(eng);
         int heiNum = ceil(h / _resolution);
@@ -99,7 +106,7 @@ void RandomMapGenerate() {
       }
   }
 
-  // generate circle obs
+  // generate circle obs 生成圆形障碍物
   for (int i = 0; i < circle_num_; ++i) {
     double x, y, z;
     x = rand_x(eng);
@@ -110,14 +117,14 @@ void RandomMapGenerate() {
     y = floor(y / _resolution) * _resolution + _resolution / 2.0;
     z = floor(z / _resolution) * _resolution + _resolution / 2.0;
 
-    Eigen::Vector3d translate(x, y, z);
+    Eigen::Vector3d translate(x, y, z); //障碍物中心点
 
-    double theta = rand_theta_(eng);
-    Eigen::Matrix3d rotate;
+    double theta = rand_theta_(eng); //随机生成旋转角度
+    Eigen::Matrix3d rotate;//旋转矩阵
     rotate << cos(theta), -sin(theta), 0.0, sin(theta), cos(theta), 0.0, 0, 0,
         1;
 
-    double radius1 = rand_radius_(eng);
+    double radius1 = rand_radius_(eng); //圆环的两个半径
     double radius2 = rand_radius2_(eng);
 
     // draw a circle centered at (x,y,z)
@@ -127,7 +134,7 @@ void RandomMapGenerate() {
       cpt(1) = radius1 * cos(angle);
       cpt(2) = radius2 * sin(angle);
 
-      // inflate
+      //// 对圆形进行膨胀（增加分辨率）
       Eigen::Vector3d cpt_if;
       for (int ifx = -0; ifx <= 0; ++ifx)
         for (int ify = -0; ify <= 0; ++ify)
@@ -143,17 +150,18 @@ void RandomMapGenerate() {
     }
   }
 
-  cloudMap.width = cloudMap.points.size();
-  cloudMap.height = 1;
-  cloudMap.is_dense = true;
+  cloudMap.width = cloudMap.points.size(); //点云宽度
+  cloudMap.height = 1; //点云高度
+  cloudMap.is_dense = true; //点云是否密集
 
   ROS_WARN("Finished generate random map ");
 
   kdtreeLocalMap.setInputCloud(cloudMap.makeShared());
 
-  _map_ok = true;
+  _map_ok = true; //地图生成完成
 }
 
+//跟上面那个差不多，但是生成的是圆柱体障碍物
 void RandomMapGenerateCylinder() {
   pcl::PointXYZ pt_random;
 
@@ -271,6 +279,64 @@ void RandomMapGenerateCylinder() {
   _map_ok = true;
 }
 
+//diy地图
+void DiyMapGenerate() {
+  pcl::PointXYZ pt_random;
+
+  // 设置三个长方体的中心位置 (x, y, z)
+  double center_x = 5.0;  // 中心位置的x坐标
+  double center_y = -5.0;  // 中心位置的y坐标
+  double center_z = 0.0;  // 中心位置的z坐标
+
+  // 设置长方体的宽度、高度和深度
+  double width = 2.0;   // 宽度
+  double height = 2.0;  // 高度
+  double depth = 2.0;   // 深度
+
+  // 设置三个长方体之间的间隔
+  double spacing = 6.0;  // 间隔
+
+  // 生成三个长方体障碍物
+  for (int i = 0; i < 3; i++) {
+    double x = center_x ;  // 每个长方体的x坐标
+    double y = center_y+ i * spacing;                // y坐标保持不变
+    double z = center_z;                // z坐标保持不变
+
+    // 将坐标对齐到地图的分辨率网格
+    x = floor(x / _resolution) * _resolution + _resolution / 2.0;
+    y = floor(y / _resolution) * _resolution + _resolution / 2.0;
+    z = floor(z / _resolution) * _resolution + _resolution / 2.0;
+
+    // 计算长方体占据的网格数量
+    int widNum = ceil(width / _resolution);   // 宽度方向的网格数量
+    int heiNum = ceil(height / _resolution);  // 高度方向的网格数量
+    int depNum = ceil(depth / _resolution);   // 深度方向的网格数量
+
+    // 在长方体范围内生成点云
+    for (int r = -widNum / 2.0; r < widNum / 2.0; r++)
+      for (int s = -heiNum / 2.0; s < heiNum / 2.0; s++)
+        for (int t = -depNum / 2.0; t < depNum / 2.0; t++) {
+          pt_random.x = x + (r + 0.5) * _resolution + 1e-2;
+          pt_random.y = y + (s + 0.5) * _resolution + 1e-2;
+          pt_random.z = z + (t + 0.5) * _resolution + 1e-2;
+          cloudMap.points.push_back(pt_random);  // 将点添加到全局地图
+        }
+  }
+
+  // 设置点云属性
+  cloudMap.width = cloudMap.points.size();  // 点云宽度（点数）
+  cloudMap.height = 1;                     // 点云高度（单行点云）
+  cloudMap.is_dense = true;                // 点云是否密集（无无效点）
+
+  ROS_WARN("Finished generate random map ");
+
+  // 将全局地图的点云数据输入到KD树中
+  kdtreeLocalMap.setInputCloud(cloudMap.makeShared());
+
+  _map_ok = true;  // 设置标志位，表示地图生成完成
+}
+
+//接收里程计信息
 void rcvOdometryCallbck(const nav_msgs::Odometry odom) {
   if (odom.child_frame_id == "X" || odom.child_frame_id == "O") return;
   _has_odom = true;
@@ -286,12 +352,13 @@ void rcvOdometryCallbck(const nav_msgs::Odometry odom) {
             0.0};
 }
 
+//
 int i = 0;
 void pubSensedPoints() {
   // if (i < 10) {
   pcl::toROSMsg(cloudMap, globalMap_pcd);
   globalMap_pcd.header.frame_id = "world";
-  _all_map_pub.publish(globalMap_pcd);
+  _all_map_pub.publish(globalMap_pcd); //发布全局地图
   // }
 
   return;
@@ -332,17 +399,19 @@ void pubSensedPoints() {
 }
 
 void clickCallback(const geometry_msgs::PoseStamped& msg) {
-  double x = msg.pose.position.x;
-  double y = msg.pose.position.y;
-  double w = rand_w(eng);
-  double h;
-  pcl::PointXYZ pt_random;
+  double x = msg.pose.position.x; //获取点击位置
+  double y = msg.pose.position.y; 
+  double w = rand_w(eng); //随机生成障碍物的宽度
+  double h; //障碍物高度
+  pcl::PointXYZ pt_random; 
 
+  //对齐到地图的分辨率网络
   x = floor(x / _resolution) * _resolution + _resolution / 2.0;
   y = floor(y / _resolution) * _resolution + _resolution / 2.0;
 
-  int widNum = ceil(w / _resolution);
+  int widNum = ceil(w / _resolution);//计算宽度占据的网格数量
 
+  //在宽度和高度方向上生成点云
   for (int r = -widNum / 2.0; r < widNum / 2.0; r++)
     for (int s = -widNum / 2.0; s < widNum / 2.0; s++) {
       h = rand_h(eng);
@@ -355,10 +424,12 @@ void clickCallback(const geometry_msgs::PoseStamped& msg) {
         cloudMap.points.push_back(pt_random);
       }
     }
+
+  //设置点云属性
   clicked_cloud_.width = clicked_cloud_.points.size();
   clicked_cloud_.height = 1;
   clicked_cloud_.is_dense = true;
-
+    //发布点云信息
   pcl::toROSMsg(clicked_cloud_, localMap_pcd);
   localMap_pcd.header.frame_id = "world";
   click_map_pub_.publish(localMap_pcd);
@@ -424,8 +495,8 @@ int main(int argc, char** argv) {
   eng.seed(seed);
 
   // RandomMapGenerate();
-  RandomMapGenerateCylinder();
-
+  //RandomMapGenerateCylinder();
+  DiyMapGenerate();
   ros::Rate loop_rate(_sense_rate);
 
   while (ros::ok()) {

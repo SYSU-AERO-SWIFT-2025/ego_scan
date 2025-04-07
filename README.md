@@ -231,3 +231,10 @@ We are still working on extending the proposed system and improving code reliabi
 For any technical issues, please contact Xin Zhou (iszhouxin@zju.edu.cn) or Fei GAO (fgaoaa@zju.edu.cn).
 
 For commercial inquiries, please contact Fei GAO (fgaoaa@zju.edu.cn).
+
+#运行scanner包并且发布扫描中心
+ rosrun uav1_scan_planner scan_planner_node
+ rostopic pub  /human/pose geometry_msgs/PoseStamped "header:
+  frame_id: 'map'
+pose:
+  position: {x: 0.0, y: 0.0, z: 0.0}"
