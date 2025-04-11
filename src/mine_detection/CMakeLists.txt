@@ -54,6 +54,7 @@ add_message_files(
   MineArray.msg
   HumanPose.msg
   UAVStatus.msg
+  WaypointStatus.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -1,0 +1,18 @@
+ego_replan_fsm改造: 
+    新增自定义消息：WaypointsStatus 到达位置geometry_msgs/Point position  # 三维位置, 到达标志位isReached
+    新增发布话题:到达目标点 /uav1/WaypointsStatus
+    待改造问题：需要找机会清空waypOINT数组，一直增加很危险
+
+uav1 scanner
+    当前缺陷：和ego交互检查的时候只检查是否到达，没有检查到达位置，有点危险
+             （但是uav1发goal给ego，等待ego返回reach信息才发下一个goal），暂时解决
+    调整：区域id为当前已经完成的区域id，开始时为0，扫描为第一个就是1
+    考虑：还没有想到wait状态要去哪里悬停，留在当前区域有点碍事了
+         uav1的compelete状态，什么时候complete，过终点时，还没写
+
+无人机状态初始化为，region_id = 0, 暂时不需要status参数 
+
+bug:
+    ego避障没有改z
+
+

@@ -84,6 +84,7 @@ namespace ego_planner
     ros::NodeHandle node_;
     ros::Timer exec_timer_, safety_timer_;
     ros::Subscriber waypoint_sub_, odom_sub_, swarm_trajs_sub_, broadcast_bspline_sub_, trigger_sub_;
+    ros::Publisher waypoint_status_pub_; // 新增发布器
     ros::Publisher replan_pub_, new_pub_, bspline_pub_, data_disp_pub_, swarm_trajs_pub_, broadcast_bspline_pub_;
 
     /* helper functions */
@@ -113,6 +114,7 @@ namespace ego_planner
     bool checkCollision();
     void publishSwarmTrajs(bool startup_pub);
 
+    void publishWaypointReached(int wp_id, const Eigen::Vector3d& position);
   public:
     EGOReplanFSM(/* args */)
     {

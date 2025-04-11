@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(uav1_scan_planner)
-
+find_package(Eigen3 REQUIRED)
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
@@ -119,6 +119,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 )
 
 ## Declare a C++ library

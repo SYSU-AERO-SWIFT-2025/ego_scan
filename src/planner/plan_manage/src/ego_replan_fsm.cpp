@@ -1,6 +1,6 @@
 
 #include <plan_manage/ego_replan_fsm.h>
-
+#include <mine_detection/WaypointStatus.h>
 namespace ego_planner
 {
 
@@ -58,7 +58,8 @@ namespace ego_planner
 
     bspline_pub_ = nh.advertise<traj_utils::Bspline>("planning/bspline", 10);
     data_disp_pub_ = nh.advertise<traj_utils::DataDisp>("planning/data_display", 100);
-
+    //新增目标点到达状态
+    waypoint_status_pub_ = nh.advertise<mine_detection::WaypointStatus>("/uav1/waypoint_status", 10);
     if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
       wp_id_=-1;//改
@@ -572,23 +573,30 @@ namespace ego_planner
       if (((target_type_ == TARGET_TYPE::PRESET_TARGET  ) ) &&
           (wp_id_ < waypoint_num_ - 1) &&
           (end_pt_ - pos).norm() < no_replan_thresh_)
-      {
+      { //到达目标点
+        // 新增：发布到达消息
+        publishWaypointReached(wp_id_, end_pt_);
         wp_id_++;
         ROS_INFO("\033[1;33mNext\033[0m");  // 黄色加粗
         planNextWaypoint(wps_[wp_id_]);
+
       }
       else if (((target_type_ == TARGET_TYPE::MANUAL_TARGET  ) ) &&
           (wp_id_ < wps_.size()-1) &&
           (end_pt_ - pos).norm() < no_replan_thresh_)
-      { //改
+      { //改 //到达目标点
+      // 新增：发布到达消息
+        publishWaypointReached(wp_id_, end_pt_);
         wp_id_++;
         ROS_INFO("\033[1;33mNext\033[0m");  // 黄色加粗
         planNextWaypoint(wps_[wp_id_]);
       }
       else if ((local_target_pt_ - end_pt_).norm() < 1e-3) // close to the global target
-      {
+      { //现有位置离目标点很近
         if (t_cur > info->duration_ - 1e-2)
         {
+          // 新增：发布最终目标点到达消息
+          publishWaypointReached(wp_id_, end_pt_);
           have_target_ = false;
           have_trigger_ = false;
 
@@ -665,6 +673,19 @@ namespace ego_planner
     }
     return false;
   }
+
+// 新增函数：发布航点到达消息
+void EGOReplanFSM::publishWaypointReached(int wp_id, const Eigen::Vector3d& position)
+{
+  mine_detection::WaypointStatus msg;
+  msg.position.x = position.x();
+  msg.position.y = position.y();
+  msg.position.z = position.z();
+  msg.isReached = 1;
+  
+  waypoint_status_pub_.publish(msg);
+  ROS_INFO("Published waypoint %d status", wp_id);
+}
 
   bool EGOReplanFSM::planFromCurrentTraj(const int trial_times /*=1*/)
   {
