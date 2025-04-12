@@ -28,9 +28,9 @@
 
     <!-- 加载uav1专用节点 -->
     <node pkg="uav1_scan_planner" type="scan_planner_node" name="scan_planner_node" output="screen">
-        <param name="scan_width" value="4"/>
-        <param name="scan_length" value="4"/>
+        <param name="scan_width" value="2"/>
+        <param name="scan_length" value="2"/>
         <param name="lane_spacing" value="1"/>
-
+        <param name="forward_offset" value="1"/>
     </node>
 </launch>
