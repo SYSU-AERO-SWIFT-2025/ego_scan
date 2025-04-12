@@ -207,4 +207,4 @@ include_directories(
 # catkin_add_nosetests(test)
 add_executable(scan_planner_node src/scan_planner_node.cpp)
 target_link_libraries(scan_planner_node ${catkin_LIBRARIES})
-
+add_dependencies(scan_planner_node mine_detection_gencpp)
