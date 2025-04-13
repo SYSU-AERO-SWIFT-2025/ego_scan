@@ -59,7 +59,8 @@ namespace ego_planner
     bspline_pub_ = nh.advertise<traj_utils::Bspline>("planning/bspline", 10);
     data_disp_pub_ = nh.advertise<traj_utils::DataDisp>("planning/data_display", 100);
     //新增目标点到达状态
-    waypoint_status_pub_ = nh.advertise<mine_detection::WaypointStatus>("/uav1/waypoint_status", 10);
+    string status_pub_topic_name = string("/uav")+ std::to_string(planner_manager_->pp_.drone_id + 1)+string("/waypoint_status"); 
+    waypoint_status_pub_ = nh.advertise<mine_detection::WaypointStatus>(status_pub_topic_name.c_str(), 10);
     if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
       wp_id_=-1;//改
