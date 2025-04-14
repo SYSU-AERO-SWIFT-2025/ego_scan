@@ -22,7 +22,7 @@ class ScanPlanner{
             nh_.param("forward_offset", foward_offset_, 2.5);
             region_center_.x = -10.0;
             region_center_.y = -9.0;
-            region_center_.z = 1.0; 
+            region_center_.z = 2.5; 
             // can_width_ = 4;
             // scan_length_ = 4;
             // lane_spacing_ = 1;
@@ -186,7 +186,7 @@ class ScanPlanner{
             geometry_msgs::PoseStamped wp;
             wp.pose.position.x = region_center_.x + x;
             wp.pose.position.y = region_center_.y + y;
-            wp.pose.position.z = 1.0;  // 固定高度
+            wp.pose.position.z = 2.5;  // 固定高度
             wp.pose.orientation.w = 1.0;
             const double MAX_VAL = 1e6;
             if (wp.pose.position.x > MAX_VAL || wp.pose.position.y > MAX_VAL || wp.pose.position.z > MAX_VAL) {
