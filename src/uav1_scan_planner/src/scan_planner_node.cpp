@@ -32,7 +32,7 @@ class ScanPlanner{
         uav2_status_sub_ = nh_.subscribe("/uav2/scan_status", 1, &ScanPlanner::uav2StatusCallback, this);
         uav3_status_sub_ = nh_.subscribe("/uav3/scan_status", 1, &ScanPlanner::uav3StatusCallback, this);
         waypoint_status_sub_ = nh_.subscribe("/uav1/waypoint_status", 10,  &ScanPlanner::egoStatusCallback, this);
-        goal_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1);//
+        goal_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/uav1/move_base_simple/goal", 1);//
         //等待订阅方初始化
         if (goal_pub_.getNumSubscribers() == 0) { 
             ROS_INFO("Waiting for subscribers...");
@@ -53,14 +53,14 @@ class ScanPlanner{
 
         //模拟地雷扫描
         void simulateMineDetection(const geometry_msgs::PoseStamped& wp) {
-            mine_detection::MineArray mines;
-            if (rand() % 10 < 3) {  // 30%概率模拟检测到地雷
+            
+            if (rand() % 10 < 8) {  // 30%概率模拟检测到地雷
                 mine_detection::Mine mine;
                 mine.position.x = wp.pose.position.x + (rand() % 3 - 1.5);
                 mine.position.y = wp.pose.position.y + (rand() % 3 - 1.5);
                 mine.position.z = 0;
-                mines.mines.push_back(mine);
-                mines_pub_.publish(mines);
+                
+                current_region_mines_.push_back(mine);
             }
         }
 
@@ -79,7 +79,8 @@ class ScanPlanner{
         std::vector<geometry_msgs::PoseStamped> waypoints_;
         size_t current_waypoint_index_ = 0;
         int scan_direction_;
-        
+        std::vector<mine_detection::Mine> current_region_mines_; //地雷数组
+
         //状态信息
         UAVState current_state_;
         //朝向信息
@@ -353,7 +354,33 @@ class ScanPlanner{
             mine_detection::UAVStatus msg;
             msg.region_id = current_region_id;
             notify_pub_.publish(msg);
+
+            // 2. 然后发布该区域的所有地雷
+            if (!current_region_mines_.empty()) {
+                mine_detection::MineArray mines_msg;
+                mines_msg.header.stamp = ros::Time::now();
+                mines_msg.header.frame_id = "map";
+                
+                // 添加所有地雷到消息中
+                for (const auto& mine : current_region_mines_) {
+                    mines_msg.mines.push_back(mine);
+                }
+                
+                // 发布地雷数据
+                mines_pub_.publish(mines_msg);
+                ROS_INFO("UAV1: Published %zu mines for region %d", 
+                         current_region_mines_.size(), current_region_id);
+                
+                // 短暂等待，确保消息已发送
+                ros::Duration(0.1).sleep();
+            } else {
+                ROS_INFO("UAV1: No mines detected in region %d", current_region_id);
+            }
+            
+            // 3. 清空当前区域的地雷列表，准备下一个区域
+            current_region_mines_.clear();
         }
+        
 
 };
 
