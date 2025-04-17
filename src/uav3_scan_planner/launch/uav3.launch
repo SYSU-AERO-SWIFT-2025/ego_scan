@@ -1,0 +1,65 @@
+<launch>
+    <remap from="/move_base_simple/goal" to="/uav3/move_base_simple/goal" />
+    <!-- 子文件中声明参数（带默认值） -->
+    <!-- Map size arguments, likely shared with UAV1 -->
+    <arg name="map_size_x" default="42.0"/>
+    <arg name="map_size_y" default="30.0"/>
+    <arg name="map_size_z" default=" 5.0"/>
+
+    <!-- Odometry topic specific to UAV2 -->
+    <arg name="odom_topic" default="visual_slam/odom" />
+    <!-- UAV Type -->
+    <arg name="uav_type" default="carpet"/> <!-- Assuming same type, adjust if needed -->
+     
+    <!-- 设置UAV2初始位置在UAV1后方 -->
+    <arg name="init_x" default="-20.0"/> <!-- 与UAV1相同 -->
+    <arg name="init_y" default="-6.0"/> <!-- UAV1是-9.0，这里在其后方 -->
+    <arg name="init_z" default="3.0"/>
+    <!-- 目标位置 -->
+    <arg name="target_x" default="20.0"/>
+    <arg name="target_y" default="9.0"/>
+    <arg name="target_z" value="3.0"/>
+
+    <!-- 继承基础配置 (run_in_sim.launch) -->
+    <include file="$(find ego_planner)/launch/run_in_sim.launch">
+        <!-- Set drone_id specifically for UAV2 -->
+        <arg name="drone_id" value="2"/> <!-- Changed drone_id to 1 -->
+        <arg name="uav_type" value="$(arg uav_type)"/>
+
+        <!-- Pass initial position for UAV2 -->
+        <arg name="init_x" value="$(arg init_x)"/>
+        <arg name="init_y" value="$(arg init_y)"/>
+        <arg name="init_z" value="$(arg init_z)"/>
+
+        <!-- Pass target position -->
+        <arg name="target_x" value="$(arg target_x)"/>
+        <arg name="target_y" value="$(arg target_y)"/>
+        <arg name="target_z" value="$(arg target_z)"/> 
+        <!-- <arg name="target_x" value="$(arg init_x)"/>
+        <arg name="target_y" value="$(arg init_y)"/>
+        <arg name="target_z" value="$(arg init_z)"/> -->
+        <!-- Pass map size -->
+        <arg name="map_size_x" value="$(arg map_size_x)"/>
+        <arg name="map_size_y" value="$(arg map_size_y)"/>
+        <arg name="map_size_z" value="$(arg map_size_z)"/>
+        <!-- Pass the correct odometry topic for UAV2 -->
+        <arg name="odom_topic" value="$(arg odom_topic)"/>
+    </include>
+
+    <!-- 加载uav3专用节点 -->
+    <node pkg="uav3_scan_planner" type="uav3_scan_planner_node" name="uav3_scan_planner_node" output="screen">
+        <!-- Load parameters specific to UAV2's verification task -->
+        <param name="hover_time" value="3.5" />        <!-- Example: Hover for 3.5 seconds -->
+        <param name="arrival_threshold" value="0.6" /> <!-- Example: Consider arrived within 0.6 meters -->
+        <!-- 重要的话题重映射 -->
+        
+        <remap from="/uav3/waypoint_status" to="/uav3/waypoint_status" />
+        <!-- Remap necessary topics if defaults don't match -->
+        <!-- The odom topic is handled via the argument passed to run_in_sim.launch -->
+        <!-- Ensure the goal topic published by this node matches what UAV2's controller expects -->
+        <!-- <remap from="/uav3/goal" to="/actual_uav3_goal_topic"/> -->
+        <!-- Ensure the waypoint status topic subscribed by this node matches what UAV2's controller publishes -->
+        <!-- <remap from="/uav3/waypoint_status" to="/actual_uav3_waypoint_status_topic"/> -->
+    </node>
+
+</launch>

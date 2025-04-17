@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>uav3_scan_planner</name>
+  <version>0.0.1</version>
+  <description>The uav3_scan_planner package for secondary mine verification</description>
+
+  <!-- One maintainer tag required, multiple allowed, one person per tag -->
+  <maintainer email="skxjw@todo.todo">skxjw</maintainer> <!-- TODO: Replace with actual maintainer info -->
+
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <license>TODO</license> <!-- TODO: Specify a license, e.g., BSD, MIT, Apache 2.0 -->
+
+  <!-- Url tags are optional, but recommended -->
+  <!-- <url type="website">http://wiki.ros.org/uav3_scan_planner</url> -->
+
+  <!-- Author tags are optional, multiple are allowed, one per tag -->
+  <!-- Authors do not have to be maintainers, but could be -->
+  <!-- <author email="jane.doe@example.com">Jane Doe</author> -->
+
+  <!-- The *depend tags are used to specify dependencies -->
+  <!-- Dependencies can be catkin packages or system dependencies -->
+  <!-- Build dependencies are required building this package -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>mine_detection</build_depend> <!-- Depends on the custom messages -->
+
+  <!-- Build export dependencies are required building packages dependent on this package -->
+  <build_export_depend>roscpp</build_export_depend>
+  <build_export_depend>std_msgs</build_export_depend>
+  <build_export_depend>geometry_msgs</build_export_depend>
+  <build_export_depend>nav_msgs</build_export_depend>
+  <build_export_depend>mine_detection</build_export_depend>
+
+  <!-- Execution dependencies are required running nodes provided by this package -->
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>mine_detection</exec_depend>
+
+  <!-- Test dependencies can be dependencies only required during testing -->
+  <!-- <test_depend>gtest</test_depend> -->
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+  </export>
+</package>

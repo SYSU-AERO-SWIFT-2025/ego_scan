@@ -112,7 +112,7 @@ class ScanPlanner{
         //uav3完成状态回调函数
         void uav3StatusCallback(const mine_detection::UAVStatus::ConstPtr& msg) {
             uav3_status_ = *msg; // 拷贝完整状态
-            ROS_DEBUG("UAV2 Status Update - Region: %d", 
+            ROS_DEBUG("UAV3 Status Update - Region: %d", 
                 msg->region_id);
         }
 
@@ -276,7 +276,7 @@ class ScanPlanner{
             goal_pub_.publish(goal);
             current_state_ = UAVState::TRANSITION;
             ROS_INFO("Transitioning to region %d at (x,y,z):(%.1f, %.1f,%.1f)", 
-                    current_region_id+1, region_center_.x, region_center_.y, region_center_.z);
+                    current_region_id, region_center_.x, region_center_.y, region_center_.z);
         }
         
         //ego回调函数
@@ -349,7 +349,12 @@ class ScanPlanner{
         //检查协同函数
         bool requireCooperation() const {
             // 检查是否需要等待其他无人机 1需要，0不需要
-            return (uav2_status_.region_id + 1  < current_region_id);
+            ROS_INFO("uav2_status_.region_id:%d,uav3_status_.region_id:%d,current_region_id:%d", 
+                uav2_status_.region_id, uav3_status_.region_id, current_region_id);
+            /* return ((uav2_status_.region_id + 1  <= current_region_id) &&
+                   (uav3_status_.region_id + 1 <= current_region_id)); */
+                   return !(uav2_status_.region_id >= current_region_id - 1 &&
+                    uav3_status_.region_id >= current_region_id - 1);
         }
 
         //通知uav2/3 uav1已经完成的区域
