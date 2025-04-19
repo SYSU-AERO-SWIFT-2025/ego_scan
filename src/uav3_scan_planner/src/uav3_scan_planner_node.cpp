@@ -10,14 +10,14 @@
 #include <mutex>
 #include <cmath>
 
-// UAV2状态机枚举
-enum class UAV2State { WAIT, MOVING, HOVERING, VERIFYING, COMPLETED, MOVING_TO_BOUNDARY };
+// UAV3状态机枚举
+enum class UAV3State { WAIT, MOVING, HOVERING, VERIFYING, COMPLETED, MOVING_TO_BOUNDARY };
 
-class UAV2ScanPlanner {
+class UAV3ScanPlanner {
 public:
-    UAV2ScanPlanner(ros::NodeHandle& nh) :
+    UAV3ScanPlanner(ros::NodeHandle& nh) :
         nh_(nh),
-        current_state_(UAV2State::WAIT),
+        current_state_(UAV3State::WAIT),
         current_mine_index_(-1),
         waypoint_reached_(false),
         hover_start_time_(0),
@@ -41,23 +41,23 @@ public:
         nh_.param<double>("region_start_y", region_start_y_, -9.0);  // Y轴中心坐标
 
         // 初始化订阅者 (确保话题名称正确)
-        uav1_status_sub_ = nh_.subscribe("/uav1/scan_status", 10, &UAV2ScanPlanner::uav1StatusCallback, this);
-        detected_mines_sub_ = nh_.subscribe("/uav1/detected_mines", 10, &UAV2ScanPlanner::detectedMinesCallback, this);
-        odom_sub_ = nh_.subscribe("/uav2/odom", 10, &UAV2ScanPlanner::odomCallback, this); // 确认此话题名
-        waypoint_status_sub_ = nh_.subscribe("/uav2/waypoint_status", 10, &UAV2ScanPlanner::egoStatusCallback, this); // 确认此话题名
+        uav1_status_sub_ = nh_.subscribe("/uav1/scan_status", 10, &UAV3ScanPlanner::uav1StatusCallback, this);
+        detected_mines_sub_ = nh_.subscribe("/uav1/detected_mines", 10, &UAV3ScanPlanner::detectedMinesCallback, this);
+        odom_sub_ = nh_.subscribe("/uav3/odom", 10, &UAV3ScanPlanner::odomCallback, this); // 确认此话题名
+        waypoint_status_sub_ = nh_.subscribe("/uav3/waypoint_status", 10, &UAV3ScanPlanner::egoStatusCallback, this); // 确认此话题名
 
         // 初始化发布者
-        status_pub_ = nh_.advertise<mine_detection::UAVStatus>("/uav2/scan_status", 10);
-        verified_mines_pub_ = nh_.advertise<mine_detection::MineArray>("/uav2/verified_mines", 10);
-        goal_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/uav2/move_base_simple/goal", 10); // 确认此话题名
+        status_pub_ = nh_.advertise<mine_detection::UAVStatus>("/uav3/scan_status", 10);
+        verified_mines_pub_ = nh_.advertise<mine_detection::MineArray>("/uav3/verified_mines", 10);
+        goal_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/uav3/move_base_simple/goal", 10); // 确认此话题名
 
         // 等待订阅者连接 (特别是 EGO-Planner 的目标点订阅者)
         ros::Rate poll_rate(10); // 10 Hz
         while (ros::ok() && goal_pub_.getNumSubscribers() == 0) {
-            ROS_INFO("UAV2: Waiting for goal subscribers on %s...", goal_pub_.getTopic().c_str());
+            ROS_INFO("UAV3: Waiting for goal subscribers on %s...", goal_pub_.getTopic().c_str());
             poll_rate.sleep();
         }
-        ROS_INFO("UAV2: Goal subscribers connected.");
+        ROS_INFO("UAV3: Goal subscribers connected.");
         /*    // 初始化位置，发送一个明确的悬停命令，覆盖EGO-Planner可能的初始行为
         ros::Duration(1.0).sleep(); // 等待系统稳定
         
@@ -78,12 +78,12 @@ public:
         } */
 
         // 启动状态机定时器
-        state_machine_timer_ = nh_.createTimer(ros::Duration(0.5), &UAV2ScanPlanner::stateMachineCallback, this);
+        state_machine_timer_ = nh_.createTimer(ros::Duration(0.5), &UAV3ScanPlanner::stateMachineCallback, this);
 
         // 发布初始状态
         //publishStatus();
 
-        ROS_INFO("UAV2 Scan Planner Initialized. Current state: WAIT");
+        ROS_INFO("UAV3 Scan Planner Initialized. Current state: WAIT");
     }
 
 private:
@@ -94,7 +94,7 @@ private:
     ros::Publisher status_pub_, verified_mines_pub_, goal_pub_;
     ros::Timer state_machine_timer_;
 
-    UAV2State current_state_; //当前状态
+    UAV3State current_state_; //当前状态
     std::vector<geometry_msgs::PoseStamped> potential_mines_;//uav1发布的地雷点
     std::vector<geometry_msgs::PoseStamped> verified_mines_;//验证为真的地雷点
     int current_mine_index_;//当前正在验证的地雷索引
@@ -102,8 +102,8 @@ private:
     int current_receiving_region_id_; // 当前地雷点应归属的区域
 
     // 添加待处理的区域ID变量
-    //int pending_region_id_;
-    //bool has_pending_region_;
+   // int pending_region_id_;
+   // bool has_pending_region_;
 
     // 按区域ID存储地雷信息
     std::map<int, std::vector<geometry_msgs::PoseStamped>> mines_by_region_;
@@ -139,20 +139,20 @@ private:
     void stateMachineCallback(const ros::TimerEvent&) {
         // ... (内容不变) ...
         switch(current_state_) {
-            case UAV2State::WAIT:
+            case UAV3State::WAIT:
                 break;
-            case UAV2State::MOVING:
+            case UAV3State::MOVING:
                 handleMovingState();
                 break;
-            case UAV2State::HOVERING:
+            case UAV3State::HOVERING:
                 handleHoveringState();
                 break;
-            case UAV2State::VERIFYING:
+            case UAV3State::VERIFYING:
                 handleVerifyingState();
                 break;
-            case UAV2State::COMPLETED:
+            case UAV3State::COMPLETED:
                 break;
-            case UAV2State::MOVING_TO_BOUNDARY://如果上一个区域没有地雷点，就飞到下一个区域的边界
+            case UAV3State::MOVING_TO_BOUNDARY://如果上一个区域没有地雷点，就飞到下一个区域的边界
                 handleMovingToBoundaryState();
                 break;
         }
@@ -164,36 +164,36 @@ private:
         // ... (内容不变) ...
         std::lock_guard<std::mutex> lock(ego_mutex_);
         if (waypoint_reached_) {
-            ROS_INFO("UAV2: EGO reported arrival at potential mine %d. Starting hover.", current_mine_index_ + 1);
+            ROS_INFO("UAV3: EGO reported arrival at potential mine %d. Starting hover.", current_mine_index_ + 1);
             waypoint_reached_ = false;
             hover_start_time_ = ros::Time::now();
-            current_state_ = UAV2State::HOVERING;
+            current_state_ = UAV3State::HOVERING;
         }
         else if (checkArrivalByPosition()) {
-             ROS_INFO("UAV2: Arrival detected by position check for mine %d. Starting hover.", current_mine_index_ + 1);
+             ROS_INFO("UAV3: Arrival detected by position check for mine %d. Starting hover.", current_mine_index_ + 1);
              hover_start_time_ = ros::Time::now();
-             current_state_ = UAV2State::HOVERING;
+             current_state_ = UAV3State::HOVERING;
         }
     }
     // --- 悬停状态处理函数 (保持不变) ---
     void handleHoveringState() {
         // ... (内容不变) ...
         if ((ros::Time::now() - hover_start_time_).toSec() >= hover_time_) {
-            ROS_INFO("UAV2: Hover complete at mine %d. Starting verification.", current_mine_index_ + 1);
-            current_state_ = UAV2State::VERIFYING;
+            ROS_INFO("UAV3: Hover complete at mine %d. Starting verification.", current_mine_index_ + 1);
+            current_state_ = UAV3State::VERIFYING;
         }
     }
     // --- 验证地雷状态处理函数 (保持不变) ---
     void handleVerifyingState() {
         // ... (内容不变) ...
-        ROS_INFO("UAV2: Verifying potential mine %d.", current_mine_index_ + 1);
+        ROS_INFO("UAV3: Verifying potential mine %d.", current_mine_index_ + 1);
         if (dis_(gen_) < verification_probability_) {
             if (current_mine_index_ >= 0 && current_mine_index_ < potential_mines_.size()) {
                 verified_mines_.push_back(potential_mines_[current_mine_index_]);
-                ROS_INFO("UAV2: Mine %d VERIFIED as real.", current_mine_index_ + 1);
+                ROS_INFO("UAV3: Mine %d VERIFIED as real.", current_mine_index_ + 1);
             }
         } else {
-            ROS_INFO("UAV2: Mine %d identified as FALSE POSITIVE.", current_mine_index_ + 1);
+            ROS_INFO("UAV3: Mine %d identified as FALSE POSITIVE.", current_mine_index_ + 1);
         }
         proceedToNextMine();
     }
@@ -209,9 +209,9 @@ private:
         double dist_sq = dx*dx + dy*dy + dz*dz;
         
         if (dist_sq < (arrival_threshold_ * arrival_threshold_) || waypoint_reached_) {
-            ROS_INFO("UAV2: Arrived at boundary position for next region. Waiting for UAV1...");
+            ROS_INFO("UAV3: Arrived at boundary position for next region. Waiting for UAV1...");
             waypoint_reached_ = false;
-            current_state_ = UAV2State::COMPLETED;  // 回到COMPLETED状态等待UAV1的下一个区域
+            current_state_ = UAV3State::COMPLETED;  // 回到COMPLETED状态等待UAV1的下一个区域
             //publishStatus();
         }
     }
@@ -223,21 +223,21 @@ private:
 
     // --- 回调函数 (修改点) ---
     void uav1StatusCallback(const mine_detection::UAVStatus::ConstPtr& msg) {
-        ROS_INFO("UAV2: Received status from UAV1 - region_id: %d. Current State: %d, Last Verified Region: %d",
+        ROS_INFO("UAV3: Received status from UAV1 - region_id: %d. Current State: %d, Last Verified Region: %d",
                  msg->region_id, static_cast<int>(current_state_), last_verified_region_id);
         // 更新区域ID
         current_receiving_region_id_ = msg->region_id;
-        // **关键检查**: 必须是新的区域ID，且UAV2当前处于等待或完成状态
+        // **关键检查**: 必须是新的区域ID，且UAV3当前处于等待或完成状态
         if (msg->region_id == last_verified_region_id+1 &&
-            (current_state_ == UAV2State::WAIT || current_state_ == UAV2State::COMPLETED))
+            (current_state_ == UAV3State::WAIT || current_state_ == UAV3State::COMPLETED))
         {
-            ROS_INFO("UAV2: UAV1 completed NEW region %d. Checking for mines to verify.", last_verified_region_id);
+            ROS_INFO("UAV3: UAV1 completed NEW region %d. Checking for mines to verify.", last_verified_region_id);
             int previous_last_verified = last_verified_region_id;
             //last_verified_region_id = msg->region_id; // 更新记录 
             auto it = mines_by_region_.find(previous_last_verified);
             // **检查是否有地雷**: 必须有地雷才能开始验证流程
             /* if (!potential_mines_.empty()) {
-                ROS_INFO("UAV2: Starting verification process for %zu mines in region %d.",
+                ROS_INFO("UAV3: Starting verification process for %zu mines in region %d.",
                          potential_mines_.size(), previous_last_verified);
                 optimizeMinePath(); // 优化地雷点访问顺序
                 current_mine_index_ = 0; // 从第一个地雷开始
@@ -246,7 +246,7 @@ private:
                 // moveToCurrentMine 会将状态设置为 MOVING */
             if (it != mines_by_region_.end() && !it->second.empty()) {
             // 有地雷，开始验证
-            ROS_INFO("UAV2: Starting verification process for %zu mines in region %d.",
+            ROS_INFO("UAV3: Starting verification process for %zu mines in region %d.",
                      it->second.size(), previous_last_verified);
             
             // 设置当前要处理的地雷列表
@@ -260,23 +260,23 @@ private:
 
             } else {
                 // 修改：无地雷时，先通知UAV1当前区域已完成验证
-                ROS_INFO("UAV2: No potential mines received for region %d. Moving to next boundary.", previous_last_verified);
+                ROS_INFO("UAV3: No potential mines received for region %d. Moving to next boundary.", previous_last_verified);
                 notifyVerificationCompleted();
                 
                 // 然后计算并飞向下一个区域边界
                 calculateRegionBoundary(previous_last_verified+1);
                 moveToBoundary();
             }
-        } else if (current_state_ == UAV2State::MOVING_TO_BOUNDARY && 
+        } else if (current_state_ == UAV3State::MOVING_TO_BOUNDARY && 
                     msg->region_id == last_verified_region_id + 1) {
             // 如果已经在飞向边界，且收到了下一个区域的完成消息
-            ROS_INFO("UAV2: Received next region completion while moving to boundary. Adapting...");
+            ROS_INFO("UAV3: Received next region completion while moving to boundary. Adapting...");
             int previous_last_verified =last_verified_region_id;
             // 更新区域ID
             //last_verified_region_id = msg->region_id; 
             if (!potential_mines_.empty()) {
                 // 如果有地雷，中断飞向边界的过程，开始验证地雷
-                ROS_INFO("UAV2: Found %zu mines for new region %d. Starting verification.",
+                ROS_INFO("UAV3: Found %zu mines for new region %d. Starting verification.",
                          potential_mines_.size(), previous_last_verified);
                 optimizeMinePath();
                 current_mine_index_ = 0;
@@ -291,16 +291,16 @@ private:
             }
         }    
         else {
-            // 如果UAV2正忙，收到新区域信号
-            ROS_WARN("UAV2: Received UAV1 status for new region %d while busy (Current State: %d). Will process after current task.",
+            // 如果UAV3正忙，收到新区域信号
+            ROS_WARN("UAV3: Received UAV1 status for new region %d while busy (Current State: %d). Will process after current task.",
                      msg->region_id, static_cast<int>(current_state_));
-            // 注意：这里假设UAV1的协作逻辑会等待UAV2完成。如果UAV1不等待，
+            // 注意：这里假设UAV1的协作逻辑会等待UAV3完成。如果UAV1不等待，
             // 可能需要在这里设置一个标志，表示有新区域待处理。
            // 保存待处理区域ID
         //pending_region_id_ = msg->region_id;
         //has_pending_region_ = true;
     
-   // ROS_INFO("UAV2: Queued region %d for processing after current task completes", pending_region_id_);
+    //ROS_INFO("UAV3: Queued region %d for processing after current task completes", pending_region_id_);
         }
     }
 
@@ -308,7 +308,7 @@ private:
         // 估计当前地雷属于哪个区域 
         //int target_region_id = last_verified_region_id;
         int target_region_id = current_receiving_region_id_;
-        ROS_INFO("UAV2: Received %zu potential mines from UAV1, estimating for region %d.", 
+        ROS_INFO("UAV3: Received %zu potential mines from UAV1, estimating for region %d.", 
                  msg->mines.size(), target_region_id);
         
         // 获取或创建目标区域的地雷数组
@@ -330,7 +330,7 @@ private:
                 if (dist_sq < 0.01) { // 10厘米阈值
                     is_duplicate = true;
                     duplicates_count++;
-                    ROS_WARN("UAV2: Skipping duplicate mine at (%.2f, %.2f, %.2f) for region %d",
+                    ROS_WARN("UAV3: Skipping duplicate mine at (%.2f, %.2f, %.2f) for region %d",
                             mine.position.x, mine.position.y, mine.position.z, target_region_id);
                     break;
                 }
@@ -338,7 +338,7 @@ private:
             
             // 只添加非重复的地雷点
             if (!is_duplicate) {
-                ROS_INFO("UAV2: Adding Potential Mine %zu at (%.2f, %.2f, %.2f) to region %d", 
+                ROS_INFO("UAV3: Adding Potential Mine %zu at (%.2f, %.2f, %.2f) to region %d", 
                         region_mines.size() + 1, mine.position.x, mine.position.y, mine.position.z,
                         target_region_id);
                 
@@ -346,7 +346,7 @@ private:
                 mine_pose.header = msg->header;
                 mine_pose.header.stamp = ros::Time(0);
                 mine_pose.pose.position = mine.position;
-                mine_pose.pose.position.z = 0.5; // UAV2验证高度
+                mine_pose.pose.position.z = 2.0; // UAV3验证高度
                 mine_pose.pose.orientation.w = 1.0;
                 region_mines.push_back(mine_pose);
             }
@@ -354,11 +354,11 @@ private:
         
         // 添加新的日志
         if (duplicates_count > 0) {
-            ROS_WARN("UAV2: Filtered out %zu duplicate mines for region %d", 
+            ROS_WARN("UAV3: Filtered out %zu duplicate mines for region %d", 
                      duplicates_count, target_region_id);
         }
         
-        ROS_INFO("UAV2: Region %d now has %zu potential mines", 
+        ROS_INFO("UAV3: Region %d now has %zu potential mines", 
                  target_region_id, region_mines.size());
     }
 
@@ -372,19 +372,19 @@ private:
     void egoStatusCallback(const mine_detection::WaypointStatus::ConstPtr& msg) {
         // ... (内容不变) ...
         std::lock_guard<std::mutex> lock(ego_mutex_);
-        if (current_state_ == UAV2State::MOVING && msg->isReached) {
+        if (current_state_ == UAV3State::MOVING && msg->isReached) {
             if (current_mine_index_ >= 0 && current_mine_index_ < potential_mines_.size()) {
                 double dx = msg->position.x - potential_mines_[current_mine_index_].pose.position.x;
                 double dy = msg->position.y - potential_mines_[current_mine_index_].pose.position.y;
                 double dist_xy_sq = dx*dx + dy*dy;
                 if (dist_xy_sq < (arrival_threshold_ * 1.5) * (arrival_threshold_ * 1.5) ) {
                     waypoint_reached_ = true;
-                    ROS_INFO("UAV2: WaypointStatus confirms arrival near mine %d.", current_mine_index_ + 1);
+                    ROS_INFO("UAV3: WaypointStatus confirms arrival near mine %d.", current_mine_index_ + 1);
                 } else {
-                    ROS_WARN("UAV2: WaypointStatus position mismatch. Ignoring status.");
+                    ROS_WARN("UAV3: WaypointStatus position mismatch. Ignoring status.");
                 }
             } else {
-                 ROS_WARN("UAV2: Received WaypointStatus while not expecting.");
+                 ROS_WARN("UAV3: Received WaypointStatus while not expecting.");
             }
         }
     }
@@ -393,11 +393,11 @@ private:
     // 新增：优化地雷点访问顺序的函数
     void optimizeMinePath() {
         if (potential_mines_.empty()) {
-            ROS_WARN("UAV2: No mines to optimize path for");
+            ROS_WARN("UAV3: No mines to optimize path for");
             return;
         }
         
-        ROS_INFO("UAV2: Optimizing verification path for %zu mines", potential_mines_.size());
+        ROS_INFO("UAV3: Optimizing verification path for %zu mines", potential_mines_.size());
         
         // 重排地雷点顺序 - 基于贪心算法（最近邻）
         std::vector<geometry_msgs::PoseStamped> ordered_mines;
@@ -426,7 +426,7 @@ private:
             }
             
             if (next_idx >= 0) {
-                ROS_INFO("UAV2: Adding mine at (%.2f, %.2f, %.2f) to optimized path at position %zu",
+                ROS_INFO("UAV3: Adding mine at (%.2f, %.2f, %.2f) to optimized path at position %zu",
                          potential_mines_[next_idx].pose.position.x,
                          potential_mines_[next_idx].pose.position.y,
                          potential_mines_[next_idx].pose.position.z,
@@ -441,7 +441,7 @@ private:
         // 打印优化前后的总路径长度，用于对比
         double original_path_length = calculatePathLength(potential_mines_);
         double optimized_path_length = calculatePathLength(ordered_mines);
-        ROS_INFO("UAV2: Path optimization: original length %.2f m, optimized length %.2f m, improvement %.2f%%",
+        ROS_INFO("UAV3: Path optimization: original length %.2f m, optimized length %.2f m, improvement %.2f%%",
                 original_path_length, optimized_path_length, 
                 100.0 * (original_path_length - optimized_path_length) / original_path_length);
         
@@ -479,7 +479,7 @@ private:
         next_region_boundary_.y = region_start_y_; // Y保持在中心线
         next_region_boundary_.z = 1.5; // 保持安全飞行高度
         
-        ROS_INFO("UAV2: Calculated boundary position for region %d at (%.2f, %.2f, %.2f)",
+        ROS_INFO("UAV3: Calculated boundary position for region %d at (%.2f, %.2f, %.2f)",
                 region_id, next_region_boundary_.x, next_region_boundary_.y, next_region_boundary_.z);
     }
 
@@ -491,7 +491,7 @@ private:
         goal.pose.position = next_region_boundary_;
         goal.pose.orientation.w = 1.0;
         
-        ROS_INFO("UAV2: Moving to boundary position for next region at (%.2f, %.2f, %.2f)",
+        ROS_INFO("UAV3: Moving to boundary position for next region at (%.2f, %.2f, %.2f)",
                 next_region_boundary_.x, next_region_boundary_.y, next_region_boundary_.z);
         
         // 发布目标点
@@ -499,7 +499,7 @@ private:
         
         // 更新状态
         waypoint_reached_ = false;
-        current_state_ = UAV2State::MOVING_TO_BOUNDARY;
+        current_state_ = UAV3State::MOVING_TO_BOUNDARY;
         //publishStatus();
     }
 
@@ -507,19 +507,19 @@ private:
     void moveToCurrentMine() {
         // ... (内容不变，除了状态设置) ...
         if (current_mine_index_ < 0 || current_mine_index_ >= potential_mines_.size()) {
-            ROS_ERROR("UAV2: Invalid mine index %d requested for movement.", current_mine_index_);
+            ROS_ERROR("UAV3: Invalid mine index %d requested for movement.", current_mine_index_);
             finishVerificationProcess(); // 调用完成处理
             return;
         }
         geometry_msgs::PoseStamped goal = potential_mines_[current_mine_index_];
         goal.header.stamp = ros::Time::now();
         goal.header.frame_id = "map";
-        ROS_INFO("UAV2: Publishing goal for potential mine %d at (%.2f, %.2f, %.2f)",
+        ROS_INFO("UAV3: Publishing goal for potential mine %d at (%.2f, %.2f, %.2f)",
                  current_mine_index_ + 1,
                  goal.pose.position.x, goal.pose.position.y, goal.pose.position.z);
         goal_pub_.publish(goal);
         waypoint_reached_ = false;
-        current_state_ = UAV2State::MOVING; // **确保在这里设置状态**
+        current_state_ = UAV3State::MOVING; // **确保在这里设置状态**
         //publishStatus();
     }
     // --- 处理下一个地雷 (修改点) ---
@@ -527,11 +527,11 @@ private:
         // ... (内容不变) ...
         current_mine_index_++;
         if (current_mine_index_ < potential_mines_.size()) {
-            ROS_INFO("UAV2: Proceeding to verify next potential mine %d / %zu.",
+            ROS_INFO("UAV3: Proceeding to verify next potential mine %d / %zu.",
                      current_mine_index_ + 1, potential_mines_.size());
             moveToCurrentMine();
         } else {
-            ROS_INFO("UAV2: Finished verifying all %zu potential mines for region %d.",
+            ROS_INFO("UAV3: Finished verifying all %zu potential mines for region %d.",
                      potential_mines_.size(), last_verified_region_id);
             finishVerificationProcess();
         }
@@ -544,7 +544,7 @@ private:
         // 清理已处理区域的数据
         int completed_region_id = last_verified_region_id-1; // 处理完的区域ID
         mines_by_region_.erase(completed_region_id); // 从存储中移除已处理的区域
-        ROS_INFO("UAV2: Removed processed mines for region %d from storage", completed_region_id);
+        ROS_INFO("UAV3: Removed processed mines for region %d from storage", completed_region_id);
 
         // 清理已处理区域的数据
         potential_mines_.clear(); // **在这里清空潜在地雷列表**
@@ -553,9 +553,9 @@ private:
 
 
 
-        /*  // 检查是否有待处理的区域
+       /*   // 检查是否有待处理的区域
         if (has_pending_region_) {
-            ROS_INFO("UAV2: Found pending region %d. Starting its processing immediately.", pending_region_id_);
+            ROS_INFO("UAV3: Found pending region %d. Starting its processing immediately.", pending_region_id_);
             
             // 创建临时消息，模拟收到UAV1状态消息
             mine_detection::UAVStatus pending_msg;
@@ -566,7 +566,7 @@ private:
             pending_region_id_ = -1;
             
             // 设置为COMPLETED状态，以便能接收新区域处理
-            current_state_ = UAV2State::COMPLETED;
+            current_state_ = UAV3State::COMPLETED;
             //publishStatus();
             
             // 延迟一小段时间后处理待定区域，确保状态已更新
@@ -576,19 +576,19 @@ private:
             uav1StatusCallback(boost::make_shared<mine_detection::UAVStatus>(pending_msg));
         } else {
             // 无待处理区域，正常进入完成状态
-            current_state_ = UAV2State::COMPLETED;
+            current_state_ = UAV3State::COMPLETED;
             //publishStatus();
-            ROS_INFO("UAV2: Verification process finished for region %d. State set to COMPLETED.", last_verified_region_id-1);
+            ROS_INFO("UAV3: Verification process finished for region %d. State set to COMPLETED.", last_verified_region_id-1);
         } */
-        current_state_ = UAV2State::COMPLETED;
-        ROS_INFO("UAV2: Verification process finished for region %d. State set to COMPLETED.", last_verified_region_id-1);
+        current_state_ = UAV3State::COMPLETED;
+        ROS_INFO("UAV3: Verification process finished for region %d. State set to COMPLETED.", last_verified_region_id-1);
     }
 
     // --- publishVerifiedMines, notifyVerificationCompleted, publishStatus, checkArrivalByPosition (保持不变) ---
     void publishVerifiedMines() {
         // ... (内容不变) ...
         if (verified_mines_.empty()) {
-            ROS_INFO("UAV2: No mines verified as real in region %d.", last_verified_region_id);
+            ROS_INFO("UAV3: No mines verified as real in region %d.", last_verified_region_id);
             return;
         }
         mine_detection::MineArray mines_msg;
@@ -601,7 +601,7 @@ private:
             mines_msg.mines.push_back(mine);
         }
         verified_mines_pub_.publish(mines_msg);
-        ROS_INFO("UAV2: Published %zu verified mines for region %d.", mines_msg.mines.size(), last_verified_region_id);
+        ROS_INFO("UAV3: Published %zu verified mines for region %d.", mines_msg.mines.size(), last_verified_region_id);
     }
 
     void notifyVerificationCompleted() {
@@ -610,7 +610,7 @@ private:
         last_verified_region_id++;
         status_msg.region_id = last_verified_region_id;
         status_pub_.publish(status_msg);
-        ROS_INFO("UAV2: Notified completion for region %d.", last_verified_region_id-1);
+        ROS_INFO("UAV3: Notified completion for region %d.", last_verified_region_id-1);
     }
 
     /* void publishStatus() {
@@ -634,9 +634,9 @@ private:
         double dist_sq = dx*dx + dy*dy + dz*dz;
         
         // 添加详细日志，帮助调试
-        ROS_DEBUG("UAV2: Distance to mine %d: %.2f m (threshold: %.2f m)",
+        ROS_DEBUG("UAV3: Distance to mine %d: %.2f m (threshold: %.2f m)",
                   current_mine_index_ + 1, sqrt(dist_sq), arrival_threshold_);
-        ROS_DEBUG("UAV2: Current pos: (%.2f, %.2f, %.2f), Target: (%.2f, %.2f, %.2f)",
+        ROS_DEBUG("UAV3: Current pos: (%.2f, %.2f, %.2f), Target: (%.2f, %.2f, %.2f)",
                   current_pose_.position.x, current_pose_.position.y, current_pose_.position.z,
                   target_pos.x, target_pos.y, target_pos.z);
         
@@ -648,9 +648,9 @@ private:
 // --- main 函数 (保持不变) ---
 int main(int argc, char** argv) {
     // ... (内容不变) ...
-    ros::init(argc, argv, "uav2_scan_planner_node");
+    ros::init(argc, argv, "uav3_scan_planner_node");
     ros::NodeHandle nh("~");
-    UAV2ScanPlanner planner(nh);
+    UAV3ScanPlanner planner(nh);
     ros::spin();
     return 0;
 }

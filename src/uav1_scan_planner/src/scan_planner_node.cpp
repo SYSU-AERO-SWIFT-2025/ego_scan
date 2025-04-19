@@ -29,8 +29,8 @@ class ScanPlanner{
                 // 调试输出
         // 话题订阅与发布
         //human_pose_sub_ = nh_.subscribe("/human/pose", 1, &ScanPlanner::humanPoseCallback, this);
-        uav2_status_sub_ = nh_.subscribe("/uav2/scan_status", 1, &ScanPlanner::uav2StatusCallback, this);
-        uav3_status_sub_ = nh_.subscribe("/uav3/scan_status", 1, &ScanPlanner::uav3StatusCallback, this);
+        uav2_status_sub_ = nh_.subscribe("/uav2/scan_status", 10, &ScanPlanner::uav2StatusCallback, this);
+        uav3_status_sub_ = nh_.subscribe("/uav3/scan_status", 10, &ScanPlanner::uav3StatusCallback, this);
         waypoint_status_sub_ = nh_.subscribe("/uav1/waypoint_status", 10,  &ScanPlanner::egoStatusCallback, this);
         goal_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/uav1/move_base_simple/goal", 1);//
         //等待订阅方初始化
@@ -105,14 +105,14 @@ class ScanPlanner{
         //uav2完成状态回调函数 
         void uav2StatusCallback(const mine_detection::UAVStatus::ConstPtr& msg) {
             uav2_status_ = *msg; // 拷贝完整状态
-            ROS_DEBUG("UAV2 Status Update - Region: %d", 
+            ROS_INFO("UAV2 Status Update - Region: %d", 
                 msg->region_id);
         }
 
         //uav3完成状态回调函数
         void uav3StatusCallback(const mine_detection::UAVStatus::ConstPtr& msg) {
             uav3_status_ = *msg; // 拷贝完整状态
-            ROS_DEBUG("UAV2 Status Update - Region: %d", 
+            ROS_DEBUG("UAV3 Status Update - Region: %d", 
                 msg->region_id);
         }
 
@@ -178,6 +178,8 @@ class ScanPlanner{
             }
             else {
               //publishHover();
+              ROS_INFO("UAV1: Still waiting for UAV2(%d) and UAV3(%d) to reach region %d",
+                uav2_status_.region_id, uav3_status_.region_id, current_region_id-1);
             }
           }
 
@@ -274,7 +276,7 @@ class ScanPlanner{
             goal_pub_.publish(goal);
             current_state_ = UAVState::TRANSITION;
             ROS_INFO("Transitioning to region %d at (x,y,z):(%.1f, %.1f,%.1f)", 
-                    current_region_id+1, region_center_.x, region_center_.y, region_center_.z);
+                    current_region_id, region_center_.x, region_center_.y, region_center_.z);
         }
         
         //ego回调函数
@@ -334,6 +336,8 @@ class ScanPlanner{
             // 2. 决策是否需要协同等待
             if (requireCooperation()) {
                 current_state_ = UAVState::WAITING;
+                notifyRegionCompletion();
+                ROS_INFO("UAV1: Waiting for UAV2 and UAV3 to complete region %d", current_region_id);
             } else {
                 notifyRegionCompletion();
                 transitionToNextRegion();
@@ -345,8 +349,12 @@ class ScanPlanner{
         //检查协同函数
         bool requireCooperation() const {
             // 检查是否需要等待其他无人机 1需要，0不需要
-            return (uav2_status_.region_id + 1  < current_region_id) || 
-                   (uav3_status_.region_id + 1 < current_region_id);
+            ROS_INFO("uav2_status_.region_id:%d,uav3_status_.region_id:%d,current_region_id:%d", 
+                uav2_status_.region_id, uav3_status_.region_id, current_region_id);
+            /* return ((uav2_status_.region_id + 1  <= current_region_id) &&
+                   (uav3_status_.region_id + 1 <= current_region_id)); */
+                   return !(uav2_status_.region_id >= current_region_id - 1 &&
+                    uav3_status_.region_id >= current_region_id - 1);
         }
 
         //通知uav2/3 uav1已经完成的区域
