@@ -336,7 +336,7 @@ class ScanPlanner{
             // 2. 决策是否需要协同等待
             if (requireCooperation()) {
                 current_state_ = UAVState::WAITING;
-                notifyRegionCompletion();
+                //notifyRegionCompletion();
                 ROS_INFO("UAV1: Waiting for UAV2 and UAV3 to complete region %d", current_region_id);
             } else {
                 notifyRegionCompletion();
