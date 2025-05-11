@@ -49,7 +49,7 @@
     <!-- 加载uav2专用节点 -->
     <node pkg="uav2_scan_planner" type="uav2_scan_planner_node" name="uav2_scan_planner_node" output="screen">
         <!-- Load parameters specific to UAV2's verification task -->
-        <param name="hover_time" value="3.5" />        <!-- Example: Hover for 3.5 seconds -->
+        <param name="hover_time" value="5.0" />        <!-- Example: Hover for 3.5 seconds -->
         <param name="arrival_threshold" value="0.6" /> <!-- Example: Consider arrived within 0.6 meters -->
         <!-- 重要的话题重映射 -->
         
