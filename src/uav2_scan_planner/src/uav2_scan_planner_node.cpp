@@ -36,7 +36,7 @@ public:
 
         // 在构造函数中添加
         nh_.param<double>("region_width", region_width_, 4.0);     // 默认值4.0
-        nh_.param<double>("region_length", region_length_, 6.0);   // 默认值6.0
+        nh_.param<double>("region_length", region_length_, 4.0);   // 默认值4.0 和uav1统一
         nh_.param<double>("region_start_x", region_start_x_, -10.0); // 第一个区域起始X
         nh_.param<double>("region_start_y", region_start_y_, -9.0);  // Y轴中心坐标
 

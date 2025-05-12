@@ -42,6 +42,16 @@
             <arg name="map_size_z" value="$(arg map_size_z)"/>
             <arg name="odom_topic" value="$(arg odom_topic)"/>
     </include>
+    
+    <!-- 为 UAV4 传递地图参数 -->
+    <include file="$(find uav4_scan_planner)/launch/uav4.launch">
+            <!-- 传递地图参数 -->
+            <arg name="map_size_x" value="$(arg map_size_x)"/>
+            <arg name="map_size_y" value="$(arg map_size_y)"/>
+            <arg name="map_size_z" value="$(arg map_size_z)"/>
+            <arg name="odom_topic" value="$(arg odom_topic)"/>
+    </include>
+    
 </launch>
     <!-- <group ns="uav2">
         <include file="$(find uav_system)/launch/uav2.launch"/>
