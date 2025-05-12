@@ -28,15 +28,14 @@ public:
         //has_pending_region_(false),
         current_receiving_region_id_(0)
     {
-        // ... (参数加载和订阅者/发布者初始化保持不变) ...
         // 加载参数
         nh_.param<double>("hover_time", hover_time_, 5.0);
-        nh_.param<double>("arrival_threshold", arrival_threshold_, 0.1); // 到达阈值
-        nh_.param<double>("verification_probability", verification_probability_, 0.8);
+        nh_.param<double>("arrival_threshold", arrival_threshold_, 0.1); // 检测到达阈值
+        nh_.param<double>("verification_probability", verification_probability_, 0.8);// 地雷验证概率
 
         // 在构造函数中添加
         nh_.param<double>("region_width", region_width_, 4.0);     // 默认值4.0
-        nh_.param<double>("region_length", region_length_, 6.0);   // 默认值6.0
+        nh_.param<double>("region_length", region_length_, 4.0);   // 默认值4.0
         nh_.param<double>("region_start_x", region_start_x_, -10.0); // 第一个区域起始X
         nh_.param<double>("region_start_y", region_start_y_, -9.0);  // Y轴中心坐标
 
@@ -61,9 +60,6 @@ public:
         // 启动状态机定时器
         state_machine_timer_ = nh_.createTimer(ros::Duration(0.5), &UAV2ScanPlanner::stateMachineCallback, this);
 
-        // 发布初始状态
-        //publishStatus();
-
         ROS_INFO("UAV2 Scan Planner Initialized. Current state: WAIT");
     }
 
@@ -74,19 +70,22 @@ private:
     ros::Subscriber uav1_status_sub_, detected_mines_sub_, odom_sub_, waypoint_status_sub_;
     ros::Publisher status_pub_, verified_mines_pub_, goal_pub_;
     ros::Timer state_machine_timer_;
+    
+   
+    UAV2State current_state_; //当前状态机状态
 
-    UAV2State current_state_; //当前状态
+    // 地雷点相关成员变量
     std::vector<geometry_msgs::PoseStamped> potential_mines_;//uav1发布的地雷点
     std::vector<geometry_msgs::PoseStamped> verified_mines_;//验证为真的地雷点
+    std::map<int, std::vector<geometry_msgs::PoseStamped>> mines_by_region_;   // 按区域ID存储地雷信息，以便保存地雷点不会丢失
     int current_mine_index_;//当前正在验证的地雷索引
     int last_verified_region_id;//上一个验证的区域ID
     int current_receiving_region_id_; // 当前地雷点应归属的区域
 
-    // 按区域ID存储地雷信息
-    std::map<int, std::vector<geometry_msgs::PoseStamped>> mines_by_region_;
-    
+
     geometry_msgs::Point current_position;//当前位置
     bool waypoint_reached_;//是否到达当前目标点
+    
     //状态控制
     ros::Time hover_start_time_;//开始悬停的时间点
     std::mutex ego_mutex_;//保护共享数据的互斥锁
@@ -111,18 +110,18 @@ private:
     // 下一个区域边界位置
     geometry_msgs::Point next_region_boundary_;
 
-    // --- 状态机核心逻辑 (保持不变) ---
+    // --- 状态机核心逻辑 ---
     void stateMachineCallback(const ros::TimerEvent&) {
         // ... (内容不变) ...
         state_machine_timer_.stop(); // 停止定时器，避免重复调用
         switch(current_state_) {
-            case UAV2State::WAIT:
+            case UAV2State::WAIT://等待扫描
                 handleWaitState();
                 break;
-            case UAV2State::MOVING:
+            case UAV2State::MOVING://移动到地雷点
                 handleMovingState();
                 break;
-            case UAV2State::VERIFYING:
+            case UAV2State::VERIFYING://验证地雷点
                 handleVerifyingState();
                 break;
             case UAV2State::MOVING_TO_BOUNDARY://如果上一个区域没有地雷点，就飞到下一个区域的边界
@@ -130,15 +129,16 @@ private:
                 break;
         }
         state_machine_timer_.start();//重新启动定时器
-        //publishStatus();
     }
-    // --- 等待状态处理函数 (保持不变) ---
+
+    /*状态处理函数*/
+    // --- 等待状态处理函数 ---
     void handleWaitState(){
         if(current_receiving_region_id_ ==last_verified_region_id+1){
             auto it = mines_by_region_.find(last_verified_region_id);
             if(it == mines_by_region_.end()&& it->second.empty()){
                 // 如果没有地雷点，飞到下一个区域的边界
-                ROS_INFO("UAV2: No mines detected in region %d. Moving to boundary.", last_verified_region_id);
+                ROS_INFO("UAV2: No mines detected in region %d. Moving to boundary.", current_receiving_region_id_+1);
                 current_state_ = UAV2State::MOVING_TO_BOUNDARY;
                 return;
             }
@@ -148,32 +148,20 @@ private:
                 verified_mines_.clear(); // 清空已验证的地雷列表
                 optimizeMinePath(); // 优化地雷点顺序
                 current_mine_index_ = 0; // 重置地雷索引
-                //last_goal_index_ = -1; // 重置上一个目标点索引
                 current_state_ = UAV2State::MOVING;
             }
             else{
                 ROS_WARN("UAV2: No new region detected or no mines to verify.");
             }
         }
-            // 这里可以添加其他逻辑，比如等待UAV1的状态更新
-        else{
-            ROS_INFO("UAV2: Waiting for UAV1 to complete region %d.", last_verified_region_id);
-        }
 
         }
     
-    // --- 移动到地雷点，状态处理函数 (保持不变) ---
+    // --- 移动到地雷点，状态处理函数 ---
     void handleMovingState() {
-        // ... (内容不变) ...
         std::lock_guard<std::mutex> lock(ego_mutex_);
         // 判断是否到达目标地雷点
-       /*  if(last_goal_index_ !=current_mine_index_){
-            moveToCurrentMine();
-            last_goal_index_ = current_mine_index_;
-        } */
-    
-        if (waypoint_reached_ || checkArrivalByPosition()) {
-            waypoint_reached_ = false;
+        if (checkArrivalByPosition()) {
             ROS_INFO("UAV2: Arrived at mine %d, start verifying...", current_mine_index_ + 1);
             current_state_ = UAV2State::VERIFYING;
         } else {
@@ -184,24 +172,29 @@ private:
     
 
 }
-    // --- 验证地雷状态处理函数 (保持不变) ---
+    // --- 验证地雷状态处理函数 ---
     void handleVerifyingState() {
+        //视觉验证地雷点是否为真
         if (simulateVisualMineDetection()) {
             current_mine_index_++;
+            // 检查是否还有下一个地雷点,还有的话就将状态改为MOVING，然后重复移动验证地雷的过程
             if (current_mine_index_ < potential_mines_.size()) {
                 current_state_ = UAV2State::MOVING;
                 ROS_INFO("UAV2: Moving to next potential mine %d.", current_mine_index_ + 1);
-            } else {
+            } 
+            // 如果验证完当前区域地雷点之后，发布验证结果        
+            else {
                 ROS_INFO("UAV2: Finished verifying all %zu potential mines for region %d.",
-                         potential_mines_.size(), last_verified_region_id);
+                         potential_mines_.size(), current_receiving_region_id_);
                 finishVerificationProcess();
             }
         }
     }
     
-    // 新增：处理飞向边界状态的函数
+    // 处理飞向边界状态的函数
     void handleMovingToBoundaryState() {
         std::lock_guard<std::mutex> lock(ego_mutex_);
+        //发布当前状态
         notifyVerificationCompleted();
         // 计算下一个区域的边界位置
         calculateRegionBoundary(last_verified_region_id+1);
@@ -469,6 +462,7 @@ private:
         ROS_INFO("UAV2: Published %zu verified mines for region %d.", mines_msg.mines.size(), last_verified_region_id);
     }
 
+    // 发布当前状态
     void notifyVerificationCompleted() {
         // ... (内容不变) ...
         mine_detection::UAVStatus status_msg;
@@ -521,12 +515,10 @@ private:
         
         // 计算三维欧几里得距离平方
         double dist_sq = dx*dx + dy*dy + dz*dz;
-        ROS_INFO("UAV2: Distance to mine %d: %.2f m (threshold: %.2f m)",
-                 current_mine_index_ + 1, sqrt(dist_sq), arrival_threshold_);
         ROS_INFO("UAV2: Current pos: (%.2f, %.2f, %.2f), Target: (%.2f, %.2f, %.2f)",
                  current_position.x, current_position.y, current_position.z,
                  target_pos.x, target_pos.y, target_pos.z);
-        if(dist_sq < (arrival_threshold_*arrival_threshold_)){
+        if((dist_sq < (arrival_threshold_*arrival_threshold_))&&waypoint_reached_){
             waypoint_reached_ = false;
             return true;
             ROS_INFO("UAV2: Arrived at mine %d by position check.", current_mine_index_ +1);

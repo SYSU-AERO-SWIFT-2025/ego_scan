@@ -162,10 +162,6 @@ private:
                 ROS_WARN("UAV3: No new region detected or no mines to verify.");
             }
         }
-            // 这里可以添加其他逻辑，比如等待UAV1的状态更新
-        else{
-            ROS_INFO("UAV3: Waiting for UAV1 to complete region %d.", last_verified_region_id);
-        }
 
         }
     
@@ -173,10 +169,6 @@ private:
     void handleMovingState() {
         // ... (内容不变) ...
         std::lock_guard<std::mutex> lock(ego_mutex_);
-        /* if(last_goal_index_!=current_mine_index_){
-            moveToCurrentMine();
-            last_goal_index_ = current_mine_index_;
-        } */
          /// 判断是否到达目标地雷点
         if (waypoint_reached_ || checkArrivalByPosition()) {
             waypoint_reached_ = false;
