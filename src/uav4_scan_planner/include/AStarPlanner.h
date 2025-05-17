@@ -51,8 +51,8 @@ public:
                                     double flight_height);//飞行高度
     // 初始化区域参数，每次调用planPathToBoundar前应该初始化
     void initRegionParm(double region_width, double region_length,double region_center_x, double region_center_y,int current_region_id){
-        region_center_x += current_region_id * region_width;
-        region_center_y += current_region_id * region_length;
+        //region_center_x += current_region_id * region_width;
+        //region_center_y += current_region_id * region_length;
         min_x = region_center_x - region_width/2;
         max_x = region_center_x + region_width/2;
         min_y = region_center_y - region_length/2;

@@ -50,13 +50,13 @@
     <node pkg="uav4_scan_planner" type="uav4_scan_planner_node" name="uav4_scan_planner_node" output="screen">
         <!-- Load parameters specific to UAV2's verification task -->
         <param name="hover_time" value="3.5" />        <!-- Example: Hover for 3.5 seconds -->
-        <param name="arrival_threshold" value="0.6" /> <!-- Example: Consider arrived within 0.6 meters -->
-        <param name="region_width" value="4.0" />
-        <param name="region_length" value="4.0" />
-        <param name="region_start_x" value="-10.0" />
-        <param name="region_start_y" value="-9.0" />
+        <param name="arrival_threshold" value="0.1" /> <!-- Example: Consider arrived within 0.6 meters -->
+        <param name="region_width" value="2.0" />
+        <param name="region_length" value="2.0" />
+        <param name="region_center_x" value="-8.0" />
+        <param name="region_center_y" value="-9.0" />
         <param name="safe_distance" value="0.5" />
-        <param name="flight_height" value="2.0" />
+        <param name="flight_height" value="1.5" />
         <!-- 重要的话题重映射 -->
         
         <remap from="/uav4/waypoint_status" to="/uav4/waypoint_status" />

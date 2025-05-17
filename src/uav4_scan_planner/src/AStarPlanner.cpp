@@ -19,6 +19,7 @@ nav_msgs::Path AStarPlanner::planPathToBoundary(
              boundary_point.x, boundary_point.y, 
              boundary_x_or_y == 0 ? "X" : "Y");
     ROS_INFO("Obstacles count: %zu", obstacles.size());    
+    ROS_INFO("A* min_x=%.2f max_x=%.2f min_y=%.2f max_y=%.2f", min_x, max_x, min_y, max_y);
     
     nav_msgs::Path path;
     path.header.frame_id = "map";

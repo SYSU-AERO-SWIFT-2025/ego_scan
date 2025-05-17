@@ -54,15 +54,34 @@ class ScanPlanner{
         //模拟地雷扫描
         void simulateMineDetection(const geometry_msgs::PoseStamped& wp) {
             
-            if (rand() % 10 < 8) {  // 30%概率模拟检测到地雷
+            if (rand() % 10 < 3) {  // 30%概率模拟检测到地雷
                 mine_detection::Mine mine;
                 mine.position.x = wp.pose.position.x + (rand() % 3 - 1.5);
                 mine.position.y = wp.pose.position.y + (rand() % 3 - 1.5);
                 mine.position.z = 0;
-                
+                //检查是否与全局地雷列表中的任何地雷太近
+                bool is_duplicate = false;
+                for (const auto& existing_mine : all_detected_mines_) {
+                    double dx = existing_mine.x - mine.position.x;
+                    double dy = existing_mine.y - mine.position.y;
+                    if (sqrt(dx * dx + dy * dy) < 0.5) { // 0.5米的安全距离
+                        is_duplicate = true;
+                        break;
+                    }
+                }
+
+                if (!is_duplicate) {
+                // 添加到当前区域地雷列表
                 current_region_mines_.push_back(mine);
+                
+                // 添加到全局地雷列表
+                all_detected_mines_.push_back(mine.position);              
+                ROS_DEBUG("UAV1: Generated new mine at (%.2f, %.2f)", 
+                    mine.position.x, mine.position.y);
+                }
             }
-        }
+            }
+        
 
     
         private:
@@ -93,6 +112,9 @@ class ScanPlanner{
         geometry_msgs::Point region_center_; //扫描中心
         double foward_offset_; //暂时没用
         double scan_width_, scan_length_, lane_spacing_;
+
+        // 添加全局地雷记录，存储所有区域发现的地雷
+        std::vector<geometry_msgs::Point> all_detected_mines_;
 
         //后期可以修改成人的命令回调函数
         void humanPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
@@ -151,15 +173,18 @@ class ScanPlanner{
         void handleScanning() {
             ROS_WARN("Status Scanning");
             if (current_waypoint_index_ < waypoints_.size()) {
-              publishCurrentWaypoint();
+                if(checkWaypointReached(waypoints_[current_waypoint_index_].pose.position)){
+                   current_waypoint_index_++;
+                   publishCurrentWaypoint();
+                }
+                else{
+                    //未到达当前航点，继续发送当前航点
+                    publishCurrentWaypoint();
+                }
             } else {
                 //判断是否需要协同，不需要就状态wait，否则transition to next poiont
-              if(checkWaypointReached(waypoints_.back().pose.position)){ //到达该区域最后一个点
-                ROS_WARN("Finish scanning region %d", current_region_id+1);
+               ROS_INFO("Finish scanning region %d", current_region_id+1);
                 finishCurrentRegion();
-              }else{
-                //什么都不干，等待直到到达该区域最后一个点
-              }
             }
           }        
 
@@ -325,7 +350,7 @@ class ScanPlanner{
             simulateMineDetection(waypoints_[current_waypoint_index_]);
     
             // 更新下一个路径点
-            current_waypoint_index_++;
+            //current_waypoint_index_++;
         }
         
         //完成当前区域扫描，状态转换

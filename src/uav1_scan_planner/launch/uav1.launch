@@ -31,7 +31,7 @@
         <param name="scan_width" value="2"/>
         <param name="scan_length" value="2"/>
         <param name="lane_spacing" value="1"/>
-        <param name="forward_offset" value="1"/>
+        <param name="forward_offset" value="2.5"/>
         
     </node>
 </launch>

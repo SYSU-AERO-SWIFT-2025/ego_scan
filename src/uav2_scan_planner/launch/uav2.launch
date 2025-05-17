@@ -49,11 +49,12 @@
     <!-- 加载uav2专用节点 -->
     <node pkg="uav2_scan_planner" type="uav2_scan_planner_node" name="uav2_scan_planner_node" output="screen">
         <!-- Load parameters specific to UAV2's verification task -->
-        <param name="hover_time" value="5.0" />        <!-- Example: Hover for 3.5 seconds -->
-        <param name="arrival_threshold" value="0.6" /> <!-- Example: Consider arrived within 0.6 meters -->
+        <param name="hover_time" value="5.0" />        <!-- Example: Hover for 5.0 seconds -->
+        <param name="arrival_threshold" value="0.1" /> <!-- Example: Consider arrived within 0.6 meters -->
+        <param name="region_width" value="2"/>
+        <param name="region_length" value="2"/>
         <!-- 重要的话题重映射 -->
-        
-        <remap from="/uav2/waypoint_status" to="/uav2/waypoint_status" />
+        <remap from="/uav2/odom" to="/visual_slam/odom"/>
         <!-- Remap necessary topics if defaults don't match -->
         <!-- The odom topic is handled via the argument passed to run_in_sim.launch -->
         <!-- Ensure the goal topic published by this node matches what UAV2's controller expects -->

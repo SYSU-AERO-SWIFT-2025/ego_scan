@@ -23,14 +23,14 @@ namespace ego_planner
     nh.param("fsm/fail_safe", enable_fail_safe_, true);
 
     have_trigger_ = !flag_realworld_experiment_;
-
-    nh.param("fsm/waypoint_num", waypoint_num_, -1);
+    //改
+   /*  nh.param("fsm/waypoint_num", waypoint_num_, -1);
     for (int i = 0; i < waypoint_num_; i++)
     {
       nh.param("fsm/waypoint" + to_string(i) + "_x", waypoints_[i][0], -1.0);
       nh.param("fsm/waypoint" + to_string(i) + "_y", waypoints_[i][1], -1.0);
       nh.param("fsm/waypoint" + to_string(i) + "_z", waypoints_[i][2], -1.0);
-    }
+    } */
 
     /* initialize main modules */
     visualization_.reset(new PlanningVisualization(nh));
@@ -63,7 +63,7 @@ namespace ego_planner
     waypoint_status_pub_ = nh.advertise<mine_detection::WaypointStatus>(status_pub_topic_name.c_str(), 10);
     if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
-      wp_id_=-1;//改
+      //wp_id_=-1;//改
       waypoint_sub_ = nh.subscribe("/move_base_simple/goal", 1, &EGOReplanFSM::waypointCallback, this);
     }
     else if (target_type_ == TARGET_TYPE::PRESET_TARGET)
@@ -85,14 +85,14 @@ namespace ego_planner
         ros::spinOnce();
         ros::Duration(0.001).sleep();
       }
-
-      readGivenWps();
+      //改
+      //readGivenWps();
     }
     else
       cout << "Wrong target_type_ value! target_type_=" << target_type_ << endl;
   }
-
-  void EGOReplanFSM::readGivenWps()
+  //改
+  /* void EGOReplanFSM::readGivenWps()
   {
     if (waypoint_num_ <= 0)
     {
@@ -156,7 +156,7 @@ namespace ego_planner
     // {
     //   ROS_ERROR("Unable to generate global trajectory!");
     // }
-  }
+  //} 
 
   void EGOReplanFSM::planNextWaypoint(const Eigen::Vector3d next_wp)
   {
@@ -166,7 +166,8 @@ namespace ego_planner
     // visualization_->displayGoalPoint(next_wp, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
 
     if (success)
-    {
+    { 
+      //改
       end_pt_ = next_wp;
 
       /*** display ***/
@@ -217,7 +218,7 @@ namespace ego_planner
       return;
 
     cout << "Triggered!" << endl;
-    // trigger_ = true;
+   /*  // trigger_ = true;
     init_pt_ = odom_pos_;
 
     Eigen::Vector3d new_wp(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
@@ -231,7 +232,17 @@ namespace ego_planner
     if (exec_state_ == WAIT_TARGET || !have_target_) {
         wp_id_++;
         planNextWaypoint(wps_[wp_id_]); //改
-    }
+    } */
+
+    end_pt_ = Eigen::Vector3d(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
+    have_target_ = true;
+    have_new_target_ = true;
+    ROS_INFO("New target: %f %f %f", end_pt_(0), end_pt_(1), end_pt_(2));
+    //如果当前状态是等待目标或没有目标，则立即执行
+    if (exec_state_ == WAIT_TARGET || !have_target_) {
+    planNextWaypoint(end_pt_); // 使用新目标点直接规划
+  }
+
   }
 
   void EGOReplanFSM::odometryCallback(const nav_msgs::OdometryConstPtr &msg)
@@ -472,11 +483,11 @@ namespace ego_planner
     case WAIT_TARGET:
     {
       if (!have_target_ || !have_trigger_){
-        if(wps_.size()!=0 ){
+        /* if(wps_.size()!=0 ){
           if(wp_id_ <wps_.size()-1){ //改
             changeFSMExecState(SEQUENTIAL_START, "FSM");
           }
-        }
+        } */
         goto force_return;
       // return;
       }
@@ -562,70 +573,31 @@ namespace ego_planner
 
     case EXEC_TRAJ:
     {
-      /* determine if need to replan */
-      LocalTrajData *info = &planner_manager_->local_data_;
-      ros::Time time_now = ros::Time::now();
-      double t_cur = (time_now - info->start_time_).toSec();
-      t_cur = min(info->duration_, t_cur);
+        LocalTrajData *info = &planner_manager_->local_data_;
+        ros::Time time_now = ros::Time::now();
+        double t_cur = (time_now - info->start_time_).toSec();
+        t_cur = min(info->duration_, t_cur);
 
-      Eigen::Vector3d pos = info->position_traj_.evaluateDeBoorT(t_cur);
+        Eigen::Vector3d pos = info->position_traj_.evaluateDeBoorT(t_cur);
 
-      /* && (end_pt_ - pos).norm() < 0.5 */
-      if (((target_type_ == TARGET_TYPE::PRESET_TARGET  ) ) &&
-          (wp_id_ < waypoint_num_ - 1) &&
-          (end_pt_ - pos).norm() < no_replan_thresh_)
-      { //到达目标点
-        // 新增：发布到达消息
-        publishWaypointReached(wp_id_, end_pt_);
-        wp_id_++;
-        ROS_INFO("\033[1;33mNext\033[0m");  // 黄色加粗
-        planNextWaypoint(wps_[wp_id_]);
-
-      }
-      else if (((target_type_ == TARGET_TYPE::MANUAL_TARGET  ) ) &&
-          (wp_id_ < wps_.size()-1) &&
-          (end_pt_ - pos).norm() < no_replan_thresh_)
-      { //改 //到达目标点
-      // 新增：发布到达消息
-        publishWaypointReached(wp_id_, end_pt_);
-        wp_id_++;
-        ROS_INFO("\033[1;33mNext\033[0m");  // 黄色加粗
-        planNextWaypoint(wps_[wp_id_]);
-      }
-      else if ((local_target_pt_ - end_pt_).norm() < 1e-3) // close to the global target
-      { //现有位置离目标点很近
-        if (t_cur > info->duration_ - 1e-2)
+        // 简化为只检查是否到达唯一目标点 // 改
+        if ((end_pt_ - pos).norm() < no_replan_thresh_)
         {
-          // 新增：发布最终目标点到达消息
-          publishWaypointReached(wp_id_, end_pt_);
-          have_target_ = false;
-          have_trigger_ = false;
-
-          if (target_type_ == TARGET_TYPE::PRESET_TARGET)
-          {
-            wp_id_ = 0;
-            planNextWaypoint(wps_[wp_id_]);
-          }
-          // if(target_type_ ==TARGET_TYPE::MANUAL_TARGET){
-          //   wp_id_++;
-          //   ROS_INFO("\033[1;33mNext\033[0m");  // 黄色加粗
-          //   planNextWaypoint(wps_[wp_id_]);
-          // }
+          // 到达目标点，发布到达消息
+          publishWaypointReached(0, end_pt_); // wp_id参数无意义，固定为0
+          have_target_ = false; // 目标已到达，等待新目标点
+          have_new_target_ = false;
+          
           changeFSMExecState(WAIT_TARGET, "FSM");
           goto force_return;
-          // return;
         }
-        else if ((end_pt_ - pos).norm() > no_replan_thresh_ && t_cur > replan_thresh_)
+        // 删除所有与wps_队列和wp_id_相关的分支 // 改
+        else if (t_cur > replan_thresh_)
         {
           changeFSMExecState(REPLAN_TRAJ, "FSM");
         }
-      }
-      else if (t_cur > replan_thresh_)
-      {
-        changeFSMExecState(REPLAN_TRAJ, "FSM");
-      }
-
-      break;
+        
+        break;
     }
 
     case EMERGENCY_STOP:
