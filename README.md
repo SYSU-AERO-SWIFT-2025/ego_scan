@@ -1,6 +1,8 @@
-# Quick Start within 3 Minutes 
+# Quick Start within 3 Minutes
+
 Compiling tests passed on ubuntu **16.04, 18.04, and 20.04** with ros installed.
 You can just execute the following commands one by one.
+
 ```
 sudo apt-get install libarmadillo-dev
 git clone https://github.com/ZJU-FAST-Lab/ego-planner-swarm.git
@@ -9,15 +11,17 @@ catkin_make -j1
 source devel/setup.bash
 roslaunch ego_planner simple_run.launch
 ```
+
 <!If your network to github is slow, We recommend you to try the gitee repository [https://gitee.com/iszhouxin/ego-planner-swarm](https://gitee.com/iszhouxin/ego-planner-swarm). They synchronize automatically./>
 
-If you find this work useful or interesting, please kindly give us a star :star:, thanks!:grinning:
+If you find this work useful or interesting, please kindly give us a star ⭐️, thanks!😀
 
 # Acknowledgements
 
 - This work extends [EGO-Planner](https://github.com/ZJU-FAST-Lab/ego-planner) to swarm navigation.
 
 # EGO-Swarm
+
 EGO-Swarm: A Fully Autonomous and Decentralized Quadrotor Swarm System in Cluttered Environments
 
 **EGO-Swarm** is a decentralized and asynchronous systematic solution for multi-robot autonomous navigation in unknown obstacle-rich scenes using merely onboard resources.
@@ -32,6 +36,7 @@ EGO-Swarm: A Fully Autonomous and Decentralized Quadrotor Swarm System in Clutte
 **Video Links:** [YouTube](https://www.youtube.com/watch?v=K5WKg8meb94&ab_channel=FeiGao), [bilibili](https://www.bilibili.com/video/BV1Nt4y1e7KD) (for Mainland China)
 
 ## 1. Related Paper
+
 EGO-Swarm: A Fully Autonomous and Decentralized Quadrotor Swarm System in Cluttered Environments, Xin Zhou, Jiangchao Zhu, Hongyu Zhou, Chao Xu, and Fei Gao (Published in ICRA2021). [Paper link](https://ieeexplore.ieee.org/abstract/document/9561902) and [Science](https://www.sciencemag.org/news/2020/12/watch-swarm-drones-fly-through-heavy-forest-while-staying-formation) report.
 
 ## 2. Standard Compilation
@@ -39,13 +44,15 @@ EGO-Swarm: A Fully Autonomous and Decentralized Quadrotor Swarm System in Clutte
 **Requirements**: ubuntu 16.04, 18.04 or 20.04 with ros-desktop-full installation.
 
 **Step 1**. Install [Armadillo](http://arma.sourceforge.net/), which is required by **uav_simulator**.
+
 ```
 sudo apt-get install libarmadillo-dev
-``` 
+```
 
 **Step 2**. Clone the code from github or gitee. These two repositories synchronize automatically.
 
 From github,
+
 ```
 git clone https://github.com/ZJU-FAST-Lab/ego-planner-swarm.git
 ```
@@ -57,6 +64,7 @@ git clone https://gitee.com/iszhouxin/ego-planner-swarm.git
 /-->
 
 **Step 3**. Compile,
+
 ```
 cd ego-planner
 catkin_make -DCMAKE_BUILD_TYPE=Release -j1
@@ -65,12 +73,14 @@ catkin_make -DCMAKE_BUILD_TYPE=Release -j1
 **Step 4**. Run.
 
 In a terminal at the _ego-planner-swarm/_ folder, open the rviz for visualization and interactions
+
 ```
 source devel/setup.bash
 roslaunch ego_planner rviz.launch
 ```
 
 In another terminal at the _ego-planner-swarm/_, run the planner in simulation by
+
 ```
 source devel/setup.bash
 roslaunch ego_planner swarm.launch
@@ -83,6 +93,7 @@ Then you can follow the gif below to control the drone.
 </p>
 
 ## 3. Using an IDE
+
 We recommend using [vscode](https://code.visualstudio.com/), the project file has been included in the code you have cloned, which is the _.vscode_ folder.
 This folder is **hidden** by default.
 Follow the steps below to configure the IDE for auto code completion & jump.
@@ -91,12 +102,15 @@ It will take 3 minutes.
 **Step 1**. Install C++ and CMake extentions in vscode.
 
 **Step 2**. Re-compile the code using the command
+
 ```
 catkin_make -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=Yes
 ```
+
 It will export a compile commands file, which can help vscode to determine the code architecture.
 
 **Step 3**. Launch vscode and select the _ego-planner_ folder to open.
+
 ```
 code ~/<......>/ego-planner-swarm/
 ```
@@ -106,36 +120,40 @@ You can add customized arguments after **"args"**. The default is **"-DCMAKE_BUI
 
 **Step 4**. Close and re-launch vscode, you will see the vscode has already understood the code architecture and can perform auto completion & jump.
 
- ## 4. Use GPU or Not
- Packages in this repo, **local_sensing** have GPU, CPU two different versions. By default, they are in CPU version for better compatibility. By changing
- 
- ```
- set(ENABLE_CUDA false)
- ```
- 
- in the _CMakeList.txt_ in **local_sensing** packages, to
- 
- ```
- set(ENABLE_CUDA true)
- ```
- 
-CUDA will be turned-on to generate depth images as a real depth camera does. 
+## 4. Use GPU or Not
 
-Please remember to also change the 'arch' and 'code' flags in the line of 
+ Packages in this repo, **local_sensing** have GPU, CPU two different versions. By default, they are in CPU version for better compatibility. By changing
+
+```
+ set(ENABLE_CUDA false)
+```
+
+ in the _CMakeList.txt_ in **local_sensing** packages, to
+
+```
+ set(ENABLE_CUDA true)
+```
+
+CUDA will be turned-on to generate depth images as a real depth camera does.
+
+Please remember to also change the 'arch' and 'code' flags in the line of
+
 ```
     set(CUDA_NVCC_FLAGS 
       -gencode arch=compute_61,code=sm_61;
     ) 
-``` 
+```
+
 in _CMakeList.txt_. If you encounter compiling error due to different Nvidia graphics card you use or you can not see proper depth images as expected, you can check the right code via [link1](https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/) or [link2](https://github.com/tpruvot/ccminer/wiki/Compatibility).
- 
+
 Don't forget to re-compile the code!
 
-**local_sensing** is the simulated sensors. If ```ENABLE_CUDA``` **true**, it mimics the depth measured by stereo cameras and renders a depth image by GPU. If ```ENABLE_CUDA``` **false**, it will publish pointclouds with no ray-casting. Our local mapping module automatically selects whether depth images or pointclouds as its input.
+**local_sensing** is the simulated sensors. If ``ENABLE_CUDA`` **true**, it mimics the depth measured by stereo cameras and renders a depth image by GPU. If ``ENABLE_CUDA`` **false**, it will publish pointclouds with no ray-casting. Our local mapping module automatically selects whether depth images or pointclouds as its input.
 
 For installation of CUDA, please go to [CUDA ToolKit](https://developer.nvidia.com/cuda-toolkit)
 
 ## 5. Use Drone Simulation Considering Dynamics or Not
+
 Typical simulations use a dynamic model to calculate the motion of the drone under given commands.
 However, it requires continuous iterations to solve a differential equation, which consumes quite a lot computation.
 When launching a swarm of drones, this computation burden may cause significant lag.
@@ -146,17 +164,22 @@ If you want to use a more realistic quadrotor model, you can un-comment the node
 Please don't forget to comment the package `poscmd_2_odom` right after the above two nodes.
 
 ## 6. Utilize the Full Performance of CPU
+
 The computation time of our planner is too short for the OS to increase CPU frequency, which makes the computation time tend to be longer and unstable.
 
 Therefore, we recommend you to manually set the CPU frequency to the maximum.
 Firstly, install a tool by
+
 ```
 sudo apt install cpufrequtils
 ```
+
 Then you can set the CPU frequency to the maximum allowed by
+
 ```
 sudo cpufreq-set -g performance
 ```
+
 More information can be found in [http://www.thinkwiki.org/wiki/How_to_use_cpufrequtils](http://www.thinkwiki.org/wiki/How_to_use_cpufrequtils).
 
 Note that CPU frequency may still decrease due to high temperature in high load.
@@ -223,18 +246,13 @@ Then you will receive depth stream along with binocular stream together at 30Hz 
 -->
 
 # Licence
+
 The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.
 
 # Maintenance
-We are still working on extending the proposed system and improving code reliability. 
+
+We are still working on extending the proposed system and improving code reliability.
 
 For any technical issues, please contact Xin Zhou (iszhouxin@zju.edu.cn) or Fei GAO (fgaoaa@zju.edu.cn).
 
 For commercial inquiries, please contact Fei GAO (fgaoaa@zju.edu.cn).
-
-#运行scanner包并且发布扫描中心
- roslaunch team_launch team.launch
- rostopic pub  /human/pose geometry_msgs/PoseStamped "header:
-  frame_id: 'map'
-pose:
-  position: {x: 0.0, y: 0.0, z: 0.0}"
